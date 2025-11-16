@@ -108,10 +108,19 @@ void loop() {
     Serial.println(requestLine);
 
     // --- メソッド判定 ---
-    bool isPost = requestLine.startsWith("POST ");
-    bool isGet  = requestLine.startsWith("GET ");
+    bool isPost    = requestLine.startsWith("POST ");
+    bool isGet     = requestLine.startsWith("GET ");
+    bool isOptions = requestLine.startsWith("OPTIONS ");
 
-    if (isPost) {
+    if (isOptions) {
+      // --- CORS プリフライト用のレスポンス ---
+      client.println("HTTP/1.1 204 No Content");
+      client.println("Access-Control-Allow-Origin: *");
+      client.println("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+      client.println("Access-Control-Allow-Headers: Content-Type");
+      client.println("Connection: close");
+      client.println();
+    } else if (isPost) {
       // Cloudflare Tunnel 経由で Nuxt から来る JSON を想定
       Serial.print("POST body: ");
       Serial.println(body);
@@ -141,6 +150,7 @@ void loop() {
       // POST に対しては簡単なレスポンスのみ返す（JSON でも OK）
       client.println("HTTP/1.1 200 OK");
       client.println("Content-Type: application/json");
+      client.println("Access-Control-Allow-Origin: *");
       client.println("Connection: close");
       client.println();
       client.print("{\"status\":\"ok\",\"selectedBox203\":");
@@ -152,6 +162,9 @@ void loop() {
     } else {
       // それ以外のメソッドには 405 などを返してもよい
       client.println("HTTP/1.1 405 Method Not Allowed");
+      client.println("Access-Control-Allow-Origin: *");
+      client.println("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+      client.println("Access-Control-Allow-Headers: Content-Type");
       client.println("Connection: close");
       client.println();
     }
@@ -177,6 +190,9 @@ void sendDynamicPage(WiFiClient client) {
   // --- HTTPヘッダー ---
   client.println("HTTP/1.1 200 OK");
   client.println("Content-type:text/html");
+  client.println("Access-Control-Allow-Origin: *");
+  client.println("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+  client.println("Access-Control-Allow-Headers: Content-Type");
   client.println("Connection: close"); // レスポンス後に接続を閉じる
   client.println(); // ヘッダー終了
 

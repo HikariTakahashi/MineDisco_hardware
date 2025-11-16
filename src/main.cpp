@@ -61,59 +61,48 @@ void loop() {
 
   if (client) {
     Serial.println("new client");
+    
+    // --- シンプルな HTTP パーサ ---
+    String requestLine = "";
+    String currentLine = "";
+    String body = "";
+    bool isFirstLine = true;
+    bool headerEnded = false;
 
-    // --- HTTP リクエスト全体を取得 ---
-    String header = "";
-    String body   = "";
-    bool isHeader = true;
-
-    // タイムアウト対策：一定時間以上かかったら抜ける
+    // タイムアウト対策
     unsigned long startTime = millis();
 
     while (client.connected() && (millis() - startTime) < 5000) {
-      while (client.available()) {
+      if (client.available()) {
         char c = client.read();
 
-        if (isHeader) {
-          header += c;
-          // ヘッダー終端検出（\r\n\r\n）
-          if (header.endsWith("\r\n\r\n")) {
-            isHeader = false;
-            // Content-Length があれば、その分だけ body を読む
-            int idxCL = header.indexOf("Content-Length:");
-            int contentLength = 0;
-            if (idxCL != -1) {
-              int idxCLend = header.indexOf("\r\n", idxCL);
-              String clLine = header.substring(idxCL + 15, idxCLend);
-              clLine.trim();
-              contentLength = clLine.toInt();
-            }
-
-            // body を読み込む
-            while (contentLength > 0 && client.connected()) {
-              while (client.available()) {
-                char b = client.read();
-                body += b;
-                contentLength--;
-                if (contentLength <= 0) break;
+        if (!headerEnded) {
+          // ヘッダー行の処理（\n 区切り）
+          if (c == '\n') {
+            // 1行終わり
+            if (currentLine.length() == 0) {
+              // 空行 = ヘッダー終わり
+              headerEnded = true;
+            } else {
+              if (isFirstLine) {
+                requestLine = currentLine;
+                isFirstLine = false;
               }
+              currentLine = "";
             }
+          } else if (c != '\r') {
+            currentLine += c;
           }
         } else {
-          // 追加のデータが来た場合も body に追加
+          // ヘッダー終わり以降はボディとして全部読み込む
           body += c;
         }
-      }
-
-      if (!isHeader) {
-        // ヘッダー読み終わり & body も読み終わったらループを抜ける
-        break;
+      } else {
+        // これ以上届くデータがなさそうなら抜ける
+        if (headerEnded) break;
       }
     }
 
-    // --- リクエストライン（1行目）を取得 ---
-    int firstLineEnd = header.indexOf("\r\n");
-    String requestLine = firstLineEnd != -1 ? header.substring(0, firstLineEnd) : header;
     requestLine.trim();
     Serial.print("Request Line: ");
     Serial.println(requestLine);

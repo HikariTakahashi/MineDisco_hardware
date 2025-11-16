@@ -16,6 +16,10 @@ const int BTN2_PIN = 3; // 204号室: 右4
 const int BTN3_PIN = 4; // 203号室: 左4
 const int BTN4_PIN = 5; // 203号室: 右2
 
+// --- リモート操作用の状態 ---
+// 2-203 のどのボックスをハイライトするか (1〜16)。0 は「どれもハイライトしない」
+int selectedBox203 = 0;
+
 // --- 関数プロトタイプ ---
 void printWifiStatus();
 void sendDynamicPage(WiFiClient client);
@@ -57,35 +61,112 @@ void loop() {
 
   if (client) {
     Serial.println("new client");
-    String currentLine = "";
-    while (client.connected()) {
-      if (client.available()) {
+
+    // --- HTTP リクエスト全体を取得 ---
+    String header = "";
+    String body   = "";
+    bool isHeader = true;
+
+    // タイムアウト対策：一定時間以上かかったら抜ける
+    unsigned long startTime = millis();
+
+    while (client.connected() && (millis() - startTime) < 5000) {
+      while (client.available()) {
         char c = client.read();
-        // Serial.write(c); // デバッグ時以外は不要
-        if (c == '\n') {
-          // HTTPリクエストの終わりを検出
-          if (currentLine.length() == 0) {
-            
-            // ★ 動的なHTMLページを送信する関数を呼び出す
-            sendDynamicPage(client);
-            
-            break; // レスポンスを送信したのでループを抜ける
-          } else {
-            currentLine = ""; // 次の行の準備
+
+        if (isHeader) {
+          header += c;
+          // ヘッダー終端検出（\r\n\r\n）
+          if (header.endsWith("\r\n\r\n")) {
+            isHeader = false;
+            // Content-Length があれば、その分だけ body を読む
+            int idxCL = header.indexOf("Content-Length:");
+            int contentLength = 0;
+            if (idxCL != -1) {
+              int idxCLend = header.indexOf("\r\n", idxCL);
+              String clLine = header.substring(idxCL + 15, idxCLend);
+              clLine.trim();
+              contentLength = clLine.toInt();
+            }
+
+            // body を読み込む
+            while (contentLength > 0 && client.connected()) {
+              while (client.available()) {
+                char b = client.read();
+                body += b;
+                contentLength--;
+                if (contentLength <= 0) break;
+              }
+            }
           }
-        } else if (c != '\r') {
-          currentLine += c; // 行に文字を追加
-        }
-        
-        // ★ LED点灯ロジックはデバッグ用に残します
-        if (currentLine.endsWith("GET /H")) {
-          digitalWrite(LED_BUILTIN, HIGH);
-        }
-        if (currentLine.endsWith("GET /L")) {
-          digitalWrite(LED_BUILTIN, LOW);
+        } else {
+          // 追加のデータが来た場合も body に追加
+          body += c;
         }
       }
+
+      if (!isHeader) {
+        // ヘッダー読み終わり & body も読み終わったらループを抜ける
+        break;
+      }
     }
+
+    // --- リクエストライン（1行目）を取得 ---
+    int firstLineEnd = header.indexOf("\r\n");
+    String requestLine = firstLineEnd != -1 ? header.substring(0, firstLineEnd) : header;
+    requestLine.trim();
+    Serial.print("Request Line: ");
+    Serial.println(requestLine);
+
+    // --- メソッド判定 ---
+    bool isPost = requestLine.startsWith("POST ");
+    bool isGet  = requestLine.startsWith("GET ");
+
+    if (isPost) {
+      // Cloudflare Tunnel 経由で Nuxt から来る JSON を想定
+      Serial.print("POST body: ");
+      Serial.println(body);
+
+      // 非常にシンプルな JSON パース: {"productNumber": 3}
+      int idx = body.indexOf("\"productNumber\"");
+      if (idx != -1) {
+        int idxColon = body.indexOf(":", idx);
+        if (idxColon != -1) {
+          int idxEnd = body.indexOf("}", idxColon);
+          if (idxEnd == -1) idxEnd = body.length();
+          String numStr = body.substring(idxColon + 1, idxEnd);
+          numStr.trim();
+          int num = numStr.toInt();
+
+          if (num >= 1 && num <= 16) {
+            selectedBox203 = num;
+          } else {
+            selectedBox203 = 0; // 範囲外はリセット
+          }
+
+          Serial.print("selectedBox203 = ");
+          Serial.println(selectedBox203);
+        }
+      }
+
+      // POST に対しては簡単なレスポンスのみ返す（JSON でも OK）
+      client.println("HTTP/1.1 200 OK");
+      client.println("Content-Type: application/json");
+      client.println("Connection: close");
+      client.println();
+      client.print("{\"status\":\"ok\",\"selectedBox203\":");
+      client.print(selectedBox203);
+      client.println("}");
+    } else if (isGet) {
+      // --- 通常のブラウザアクセス（GET）には HTML を返す ---
+      sendDynamicPage(client);
+    } else {
+      // それ以外のメソッドには 405 などを返してもよい
+      client.println("HTTP/1.1 405 Method Not Allowed");
+      client.println("Connection: close");
+      client.println();
+    }
+
     // 接続を閉じる
     client.stop();
     Serial.println("client disconnected");
@@ -177,42 +258,15 @@ void sendDynamicPage(WiFiClient client) {
   client.println("<div class=\"room-name\">2-203</div>");
   client.println("<div class=\"grid-container\">");
 
-  // (1)
-  client.println("<div class=\"grid-item\"></div>");
-  // (2)
-  client.println("<div class=\"grid-item\"></div>");
-  // (3)
-  client.println("<div class=\"grid-item\"></div>");
-  // (4) - BTN3
-  client.print("<div class=\"grid-item ");
-  if (isBtn3_Pressed) { client.print("highlighted"); }
-  client.println("\"></div>");
-  // (5)
-  client.println("<div class=\"grid-item\"></div>");
-  // (6)
-  client.println("<div class=\"grid-item\"></div>");
-  // (7)
-  client.println("<div class=\"grid-item\"></div>");
-  // (8) - BTN4
-  client.print("<div class=\"grid-item ");
-  if (isBtn4_Pressed) { client.print("highlighted"); }
-  client.println("\"></div>");
-  // (9)
-  client.println("<div class=\"grid-item\"></div>");
-  // (10)
-  client.println("<div class=\"grid-item\"></div>");
-  // (11)
-  client.println("<div class=\"grid-item\"></div>");
-  // (12)
-  client.println("<div class=\"grid-item\"></div>");
-  // (13)
-  client.println("<div class=\"grid-item\"></div>");
-  // (14)
-  client.println("<div class=\"grid-item\"></div>");
-  // (15)
-  client.println("<div class=\"grid-item\"></div>");
-  // (16)
-  client.println("<div class=\"grid-item\"></div>");
+  // ★ 2-203 は Cloudflare Tunnel 経由の JSON（productNumber）で制御する
+  // selectedBox203 (1〜16) が一致したマスを赤くハイライト
+  for (int i = 1; i <= 16; i++) {
+    client.print("<div class=\"grid-item ");
+    if (selectedBox203 == i) {
+      client.print("highlighted");
+    }
+    client.println("\"></div>");
+  }
 
   client.println("</div></div>"); // grid-container, room-203 終了
 

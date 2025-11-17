@@ -90,7 +90,7 @@ void setup() {
 
 
 void loop() {
-  // --- トグルスイッチの状態をチェック（押されている間はtrue、離すとfalse） ---
+  // --- トグルスイッチの状態をチェック（押した瞬間にtrue、releaseリクエストまで維持） ---
   unsigned long currentTime = millis();
   
   // 2-204室の16個のタクトスイッチを処理（インデックス0~15が区画1~16に対応）
@@ -103,19 +103,19 @@ void loop() {
     // デバウンス時間が経過したら、状態を確定
     if ((currentTime - lastDebounceTime204[i]) > debounceDelay) {
       if (stableBtn204[i] != currentBtn) {
+        // 押された瞬間（HIGH→LOW）のみtrueに設定（離してもtrueのまま）
+        if (stableBtn204[i] == HIGH && currentBtn == LOW) {
+          box204State[i] = true;
+          Serial.print("BTN204[");
+          Serial.print(i);
+          Serial.print("] (pin ");
+          Serial.print(BTN204_PINS[i]);
+          Serial.print(") pressed -> box204State[");
+          Serial.print(i);
+          Serial.println("] = true");
+        }
+        // 離したとき（LOW→HIGH）は状態を変更しない（releaseリクエストまで維持）
         stableBtn204[i] = currentBtn;
-        // 安定した状態に基づいて状態配列を更新（押されている = LOW = true）
-        box204State[i] = (stableBtn204[i] == LOW);
-        Serial.print("BTN204[");
-        Serial.print(i);
-        Serial.print("] (pin ");
-        Serial.print(BTN204_PINS[i]);
-        Serial.print(") stable state: ");
-        Serial.print(stableBtn204[i] == LOW ? "pressed" : "released");
-        Serial.print(", box204State[");
-        Serial.print(i);
-        Serial.print("] = ");
-        Serial.println(box204State[i]);
       }
     }
     prevBtn204[i] = currentBtn;
@@ -128,12 +128,14 @@ void loop() {
   }
   if ((currentTime - lastDebounceTime3) > debounceDelay) {
     if (stableBtn3 != currentBtn3) {
+      // 押された瞬間（HIGH→LOW）のみtrueに設定（離してもtrueのまま）
+      if (stableBtn3 == HIGH && currentBtn3 == LOW) {
+        box203State[3] = true;
+        Serial.print("BTN3 pressed -> box203State[3] = true");
+        Serial.println();
+      }
+      // 離したとき（LOW→HIGH）は状態を変更しない（releaseリクエストまで維持）
       stableBtn3 = currentBtn3;
-      box203State[3] = (stableBtn3 == LOW);
-      Serial.print("BTN3 stable state: ");
-      Serial.print(stableBtn3 == LOW ? "pressed" : "released");
-      Serial.print(", box203State[3] = ");
-      Serial.println(box203State[3]);
     }
   }
   prevBtn3 = currentBtn3;
@@ -145,12 +147,14 @@ void loop() {
   }
   if ((currentTime - lastDebounceTime4) > debounceDelay) {
     if (stableBtn4 != currentBtn4) {
+      // 押された瞬間（HIGH→LOW）のみtrueに設定（離してもtrueのまま）
+      if (stableBtn4 == HIGH && currentBtn4 == LOW) {
+        box203State[7] = true;
+        Serial.print("BTN4 pressed -> box203State[7] = true");
+        Serial.println();
+      }
+      // 離したとき（LOW→HIGH）は状態を変更しない（releaseリクエストまで維持）
       stableBtn4 = currentBtn4;
-      box203State[7] = (stableBtn4 == LOW);
-      Serial.print("BTN4 stable state: ");
-      Serial.print(stableBtn4 == LOW ? "pressed" : "released");
-      Serial.print(", box203State[7] = ");
-      Serial.println(box203State[7]);
     }
   }
   prevBtn4 = currentBtn4;

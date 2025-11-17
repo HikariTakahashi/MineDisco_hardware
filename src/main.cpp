@@ -433,6 +433,22 @@ void sendDynamicPage(WiFiClient client) {
   client.println(); // ヘッダー終了
 
   // --- HTML開始 ---
+  // cc:tweaked通信用の状態情報を先頭に配置（データサイズ削減・パース処理高速化）
+  client.print("<!--BOX_STATUS:");
+  // 2-204室の状態（16区画をカンマ区切りで: 1=赤色, 0=通常）
+  client.print("204:");
+  for (int i = 0; i < 16; i++) {
+    if (i > 0) client.print(",");
+    client.print(box204State[i] ? "1" : "0");
+  }
+  // 2-203室の状態（16区画をカンマ区切りで: 1=赤色, 0=通常）
+  client.print("|203:");
+  for (int i = 0; i < 16; i++) {
+    if (i > 0) client.print(",");
+    client.print(box203State[i] ? "1" : "0");
+  }
+  client.println("-->");
+  
   client.println("<!DOCTYPE html><html><head>");
   client.println("<title>欅祭 呼び出しリスト</title>");
   client.println("<meta charset=\"UTF-8\">");

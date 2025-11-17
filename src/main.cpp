@@ -11,8 +11,15 @@ int status = WL_IDLE_STATUS;
 WiFiServer server(80);
 
 // --- ★ ボタンのピン設定 ---
-const int BTN1_PIN = 2; // 204号室: 左3
-const int BTN2_PIN = 3; // 204号室: 右4
+// 2-204室の16区画に対応するタクトスイッチ（2~13ピンとA0~A3ピン）
+// インデックス0~15がそれぞれ区画1~16に対応
+const int BTN204_PINS[16] = {
+  2,  3,  4,  5,  6,  7,  8,  9,   // ピン 2~9
+  10, 11, 12, 13,                  // ピン 10~13
+  A0, A1, A2, A3                   // アナログピン A0~A3
+};
+
+// 2-203室のタクトスイッチ（既存の設定を維持、必要に応じて拡張可能）
 const int BTN3_PIN = 4; // 203号室: 左4
 const int BTN4_PIN = 5; // 203号室: 右2
 
@@ -25,21 +32,22 @@ bool box203State[16] = {false, false, false, false, false, false, false, false,
 bool box204State[16] = {false, false, false, false, false, false, false, false,
                          false, false, false, false, false, false, false, false};
 
-// トグルスイッチの前回の状態（エッジ検出用）
-bool prevBtn1 = HIGH;
-bool prevBtn2 = HIGH;
+// 2-204室のタクトスイッチ用のデバウンス変数
+bool prevBtn204[16] = {HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH,
+                        HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH};
+unsigned long lastDebounceTime204[16] = {0, 0, 0, 0, 0, 0, 0, 0,
+                                         0, 0, 0, 0, 0, 0, 0, 0};
+bool stableBtn204[16] = {HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH,
+                          HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH};
+
+// 2-203室のタクトスイッチ用のデバウンス変数
 bool prevBtn3 = HIGH;
 bool prevBtn4 = HIGH;
-
-// デバウンス用のタイムスタンプと安定した状態
-unsigned long lastDebounceTime1 = 0;
-unsigned long lastDebounceTime2 = 0;
 unsigned long lastDebounceTime3 = 0;
 unsigned long lastDebounceTime4 = 0;
-bool stableBtn1 = HIGH;
-bool stableBtn2 = HIGH;
 bool stableBtn3 = HIGH;
 bool stableBtn4 = HIGH;
+
 const unsigned long debounceDelay = 50; // 50ms のデバウンス時間
 
 // --- 関数プロトタイプ ---
@@ -51,8 +59,11 @@ void setup() {
   pinMode(led, OUTPUT);
 
   // ★ ピンモードを INPUT_PULLUP に設定
-  pinMode(BTN1_PIN, INPUT_PULLUP);
-  pinMode(BTN2_PIN, INPUT_PULLUP);
+  // 2-204室の16個のタクトスイッチ
+  for (int i = 0; i < 16; i++) {
+    pinMode(BTN204_PINS[i], INPUT_PULLUP);
+  }
+  // 2-203室のタクトスイッチ
   pinMode(BTN3_PIN, INPUT_PULLUP);
   pinMode(BTN4_PIN, INPUT_PULLUP);
 
@@ -82,42 +93,33 @@ void loop() {
   // --- トグルスイッチの状態をチェック（押されている間はtrue、離すとfalse） ---
   unsigned long currentTime = millis();
   
-  // BTN1 (204号室: 左3 = インデックス2) の処理
-  bool currentBtn1 = digitalRead(BTN1_PIN);
-  if (currentBtn1 != prevBtn1) {
-    // 状態が変化したので、デバウンスタイマーをリセット
-    lastDebounceTime1 = currentTime;
-  }
-  // デバウンス時間が経過したら、状態を確定
-  if ((currentTime - lastDebounceTime1) > debounceDelay) {
-    if (stableBtn1 != currentBtn1) {
-      stableBtn1 = currentBtn1;
-      // 安定した状態に基づいて状態配列を更新（押されている = LOW = true）
-      box204State[2] = (stableBtn1 == LOW);
-      Serial.print("BTN1 stable state: ");
-      Serial.print(stableBtn1 == LOW ? "pressed" : "released");
-      Serial.print(", box204State[2] = ");
-      Serial.println(box204State[2]);
+  // 2-204室の16個のタクトスイッチを処理（インデックス0~15が区画1~16に対応）
+  for (int i = 0; i < 16; i++) {
+    bool currentBtn = digitalRead(BTN204_PINS[i]);
+    if (currentBtn != prevBtn204[i]) {
+      // 状態が変化したので、デバウンスタイマーをリセット
+      lastDebounceTime204[i] = currentTime;
     }
-  }
-  prevBtn1 = currentBtn1;
-
-  // BTN2 (204号室: 右4 = インデックス12) の処理
-  bool currentBtn2 = digitalRead(BTN2_PIN);
-  if (currentBtn2 != prevBtn2) {
-    lastDebounceTime2 = currentTime;
-  }
-  if ((currentTime - lastDebounceTime2) > debounceDelay) {
-    if (stableBtn2 != currentBtn2) {
-      stableBtn2 = currentBtn2;
-      box204State[12] = (stableBtn2 == LOW);
-      Serial.print("BTN2 stable state: ");
-      Serial.print(stableBtn2 == LOW ? "pressed" : "released");
-      Serial.print(", box204State[12] = ");
-      Serial.println(box204State[12]);
+    // デバウンス時間が経過したら、状態を確定
+    if ((currentTime - lastDebounceTime204[i]) > debounceDelay) {
+      if (stableBtn204[i] != currentBtn) {
+        stableBtn204[i] = currentBtn;
+        // 安定した状態に基づいて状態配列を更新（押されている = LOW = true）
+        box204State[i] = (stableBtn204[i] == LOW);
+        Serial.print("BTN204[");
+        Serial.print(i);
+        Serial.print("] (pin ");
+        Serial.print(BTN204_PINS[i]);
+        Serial.print(") stable state: ");
+        Serial.print(stableBtn204[i] == LOW ? "pressed" : "released");
+        Serial.print(", box204State[");
+        Serial.print(i);
+        Serial.print("] = ");
+        Serial.println(box204State[i]);
+      }
     }
+    prevBtn204[i] = currentBtn;
   }
-  prevBtn2 = currentBtn2;
 
   // BTN3 (203号室: 左4 = インデックス3) の処理
   bool currentBtn3 = digitalRead(BTN3_PIN);

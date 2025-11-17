@@ -50,9 +50,24 @@ bool stableBtn4 = HIGH;
 
 const unsigned long debounceDelay = 50; // 50ms のデバウンス時間
 
+// --- cc:tweaked サーバー設定 ---
+// cc:tweakedコンピュータのIPアドレスとポートを設定してください
+// 例: IPAddress cctweaked_ip(192, 168, 1, 100);
+// デフォルトは空（使用しない場合はコメントアウト）
+IPAddress cctweaked_ip; // 使用する場合は setup() で設定してください
+int cctweaked_port = 8080; // cc:tweakedのHTTPサーバーポート
+
+// --- 状態変化検出用の前回の状態 ---
+bool prevBox203State[16] = {false, false, false, false, false, false, false, false,
+                             false, false, false, false, false, false, false, false};
+bool prevBox204State[16] = {false, false, false, false, false, false, false, false,
+                             false, false, false, false, false, false, false, false};
+
 // --- 関数プロトタイプ ---
 void printWifiStatus();
 void sendDynamicPage(WiFiClient client);
+void sendToCCTweaked(String room, int box, String action);
+bool isCCTweakedConfigured();
 
 void setup() {
   Serial.begin(9600);
@@ -86,6 +101,11 @@ void setup() {
   }
   server.begin();
   printWifiStatus();
+
+  // --- cc:tweaked サーバーのIPアドレスを設定（必要に応じて変更してください）---
+  // 例: cctweaked_ip = IPAddress(192, 168, 1, 100);
+  // コメントアウトしている場合は、cc:tweakedへの送信は行われません
+  // cctweaked_ip = IPAddress(192, 168, 1, 100);
 }
 
 
@@ -113,6 +133,11 @@ void loop() {
           Serial.print(") pressed -> box204State[");
           Serial.print(i);
           Serial.println("] = true");
+          
+          // 状態が変化したので、cc:tweakedに通知
+          if (isCCTweakedConfigured()) {
+            sendToCCTweaked("204", i + 1, "set"); // boxは1-16
+          }
         }
         // 離したとき（LOW→HIGH）は状態を変更しない（releaseリクエストまで維持）
         stableBtn204[i] = currentBtn;
@@ -296,18 +321,33 @@ void loop() {
               Serial.print("Clear box203State[");
               Serial.print(boxNum - 1);
               Serial.println("] = false");
+              
+              // 状態が変化したので、cc:tweakedに通知
+              if (isCCTweakedConfigured()) {
+                sendToCCTweaked("203", boxNum, "clear");
+              }
             } else {
               // box が指定されていない場合は全解除
               for (int i = 0; i < 16; i++) {
                 box203State[i] = false;
               }
               Serial.println("Clear all box203State = false");
+              
+              // 全解除の場合は、cc:tweakedに通知（box=nullで送信）
+              if (isCCTweakedConfigured()) {
+                sendToCCTweaked("203", -1, "clear"); // box=-1は全解除を示す
+              }
             }
           } else if (actionStr == "set" && boxNum >= 1 && boxNum <= 16) {
             box203State[boxNum - 1] = true;
             Serial.print("Set box203State[");
             Serial.print(boxNum - 1);
             Serial.println("] = true");
+            
+            // 状態が変化したので、cc:tweakedに通知
+            if (isCCTweakedConfigured()) {
+              sendToCCTweaked("203", boxNum, "set");
+            }
           }
         } else if (roomStr == "204") {
           if (actionStr == "clear") {
@@ -317,18 +357,33 @@ void loop() {
               Serial.print("Clear box204State[");
               Serial.print(boxNum - 1);
               Serial.println("] = false");
+              
+              // 状態が変化したので、cc:tweakedに通知
+              if (isCCTweakedConfigured()) {
+                sendToCCTweaked("204", boxNum, "clear");
+              }
             } else {
               // box が指定されていない場合は全解除
               for (int i = 0; i < 16; i++) {
                 box204State[i] = false;
               }
               Serial.println("Clear all box204State = false");
+              
+              // 全解除の場合は、cc:tweakedに通知（box=nullで送信）
+              if (isCCTweakedConfigured()) {
+                sendToCCTweaked("204", -1, "clear"); // box=-1は全解除を示す
+              }
             }
           } else if (actionStr == "set" && boxNum >= 1 && boxNum <= 16) {
             box204State[boxNum - 1] = true;
             Serial.print("Set box204State[");
             Serial.print(boxNum - 1);
             Serial.println("] = true");
+            
+            // 状態が変化したので、cc:tweakedに通知
+            if (isCCTweakedConfigured()) {
+              sendToCCTweaked("204", boxNum, "set");
+            }
           }
         }
       }
@@ -447,4 +502,79 @@ void printWifiStatus() {
   Serial.println(" dBm");
   Serial.print("To see this page in action, open a browser to http://");
   Serial.println(ip);
+}
+
+/**
+ * @brief cc:tweakedサーバーが設定されているかどうかを確認
+ * @return true: 設定済み, false: 未設定
+ */
+bool isCCTweakedConfigured() {
+  return cctweaked_ip[0] != 0 || cctweaked_ip[1] != 0 || 
+         cctweaked_ip[2] != 0 || cctweaked_ip[3] != 0;
+}
+
+/**
+ * @brief cc:tweakedサーバーにJSONリクエストを送信
+ * @param room 部屋番号 ("203" または "204")
+ * @param box 区画番号 (1-16、-1の場合は全解除)
+ * @param action アクション ("set" または "clear")
+ */
+void sendToCCTweaked(String room, int box, String action) {
+  if (!isCCTweakedConfigured()) {
+    return;
+  }
+
+  WiFiClient client;
+  
+  Serial.print("Connecting to cc:tweaked server: ");
+  Serial.print(cctweaked_ip);
+  Serial.print(":");
+  Serial.println(cctweaked_port);
+
+  if (client.connect(cctweaked_ip, cctweaked_port)) {
+    Serial.println("Connected to cc:tweaked server");
+    
+    // JSON ボディを構築
+    String jsonBody = "{\"room\":\"" + room + "\",\"action\":\"" + action + "\"";
+    if (box > 0) {
+      jsonBody += ",\"box\":" + String(box);
+    }
+    jsonBody += "}";
+    
+    // HTTP POST リクエストを送信
+    client.println("POST /api/box HTTP/1.1");
+    client.print("Host: ");
+    client.println(cctweaked_ip);
+    client.println("Content-Type: application/json");
+    client.print("Content-Length: ");
+    client.println(jsonBody.length());
+    client.println("Connection: close");
+    client.println();
+    client.println(jsonBody);
+    
+    Serial.print("Sent to cc:tweaked: ");
+    Serial.println(jsonBody);
+    
+    // レスポンスを待つ（タイムアウト: 5秒）
+    unsigned long timeout = millis();
+    while (client.available() == 0) {
+      if (millis() - timeout > 5000) {
+        Serial.println(">>> Client Timeout !");
+        client.stop();
+        return;
+      }
+    }
+    
+    // レスポンスを読み込んで表示
+    while (client.available()) {
+      String line = client.readStringUntil('\r');
+      Serial.print(line);
+    }
+    Serial.println();
+    
+    client.stop();
+    Serial.println("Connection to cc:tweaked closed");
+  } else {
+    Serial.println("Connection to cc:tweaked failed");
+  }
 }

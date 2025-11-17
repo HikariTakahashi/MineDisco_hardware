@@ -31,6 +31,17 @@ bool prevBtn2 = HIGH;
 bool prevBtn3 = HIGH;
 bool prevBtn4 = HIGH;
 
+// デバウンス用のタイムスタンプと安定した状態
+unsigned long lastDebounceTime1 = 0;
+unsigned long lastDebounceTime2 = 0;
+unsigned long lastDebounceTime3 = 0;
+unsigned long lastDebounceTime4 = 0;
+bool stableBtn1 = HIGH;
+bool stableBtn2 = HIGH;
+bool stableBtn3 = HIGH;
+bool stableBtn4 = HIGH;
+const unsigned long debounceDelay = 50; // 50ms のデバウンス時間
+
 // --- 関数プロトタイプ ---
 void printWifiStatus();
 void sendDynamicPage(WiFiClient client);
@@ -68,41 +79,77 @@ void setup() {
 
 
 void loop() {
-  // --- トグルスイッチの状態をチェック（エッジ検出） ---
+  // --- トグルスイッチの状態をチェック（押されている間はtrue、離すとfalse） ---
+  unsigned long currentTime = millis();
+  
+  // BTN1 (204号室: 左3 = インデックス2) の処理
   bool currentBtn1 = digitalRead(BTN1_PIN);
-  bool currentBtn2 = digitalRead(BTN2_PIN);
-  bool currentBtn3 = digitalRead(BTN3_PIN);
-  bool currentBtn4 = digitalRead(BTN4_PIN);
-
-  // BTN1 (204号室: 左3 = インデックス2) が押された瞬間を検出
-  if (prevBtn1 == HIGH && currentBtn1 == LOW) {
-    box204State[2] = !box204State[2]; // トグル
-    Serial.print("BTN1 pressed. box204State[2] = ");
-    Serial.println(box204State[2]);
+  if (currentBtn1 != prevBtn1) {
+    // 状態が変化したので、デバウンスタイマーをリセット
+    lastDebounceTime1 = currentTime;
+  }
+  // デバウンス時間が経過したら、状態を確定
+  if ((currentTime - lastDebounceTime1) > debounceDelay) {
+    if (stableBtn1 != currentBtn1) {
+      stableBtn1 = currentBtn1;
+      // 安定した状態に基づいて状態配列を更新（押されている = LOW = true）
+      box204State[2] = (stableBtn1 == LOW);
+      Serial.print("BTN1 stable state: ");
+      Serial.print(stableBtn1 == LOW ? "pressed" : "released");
+      Serial.print(", box204State[2] = ");
+      Serial.println(box204State[2]);
+    }
   }
   prevBtn1 = currentBtn1;
 
-  // BTN2 (204号室: 右4 = インデックス12) が押された瞬間を検出
-  if (prevBtn2 == HIGH && currentBtn2 == LOW) {
-    box204State[12] = !box204State[12]; // トグル
-    Serial.print("BTN2 pressed. box204State[12] = ");
-    Serial.println(box204State[12]);
+  // BTN2 (204号室: 右4 = インデックス12) の処理
+  bool currentBtn2 = digitalRead(BTN2_PIN);
+  if (currentBtn2 != prevBtn2) {
+    lastDebounceTime2 = currentTime;
+  }
+  if ((currentTime - lastDebounceTime2) > debounceDelay) {
+    if (stableBtn2 != currentBtn2) {
+      stableBtn2 = currentBtn2;
+      box204State[12] = (stableBtn2 == LOW);
+      Serial.print("BTN2 stable state: ");
+      Serial.print(stableBtn2 == LOW ? "pressed" : "released");
+      Serial.print(", box204State[12] = ");
+      Serial.println(box204State[12]);
+    }
   }
   prevBtn2 = currentBtn2;
 
-  // BTN3 (203号室: 左4 = インデックス3) が押された瞬間を検出
-  if (prevBtn3 == HIGH && currentBtn3 == LOW) {
-    box203State[3] = !box203State[3]; // トグル
-    Serial.print("BTN3 pressed. box203State[3] = ");
-    Serial.println(box203State[3]);
+  // BTN3 (203号室: 左4 = インデックス3) の処理
+  bool currentBtn3 = digitalRead(BTN3_PIN);
+  if (currentBtn3 != prevBtn3) {
+    lastDebounceTime3 = currentTime;
+  }
+  if ((currentTime - lastDebounceTime3) > debounceDelay) {
+    if (stableBtn3 != currentBtn3) {
+      stableBtn3 = currentBtn3;
+      box203State[3] = (stableBtn3 == LOW);
+      Serial.print("BTN3 stable state: ");
+      Serial.print(stableBtn3 == LOW ? "pressed" : "released");
+      Serial.print(", box203State[3] = ");
+      Serial.println(box203State[3]);
+    }
   }
   prevBtn3 = currentBtn3;
 
-  // BTN4 (203号室: 右2 = インデックス7) が押された瞬間を検出
-  if (prevBtn4 == HIGH && currentBtn4 == LOW) {
-    box203State[7] = !box203State[7]; // トグル
-    Serial.print("BTN4 pressed. box203State[7] = ");
-    Serial.println(box203State[7]);
+  // BTN4 (203号室: 右2 = インデックス7) の処理
+  bool currentBtn4 = digitalRead(BTN4_PIN);
+  if (currentBtn4 != prevBtn4) {
+    lastDebounceTime4 = currentTime;
+  }
+  if ((currentTime - lastDebounceTime4) > debounceDelay) {
+    if (stableBtn4 != currentBtn4) {
+      stableBtn4 = currentBtn4;
+      box203State[7] = (stableBtn4 == LOW);
+      Serial.print("BTN4 stable state: ");
+      Serial.print(stableBtn4 == LOW ? "pressed" : "released");
+      Serial.print(", box203State[7] = ");
+      Serial.println(box203State[7]);
+    }
   }
   prevBtn4 = currentBtn4;
 

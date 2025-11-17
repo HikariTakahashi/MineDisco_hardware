@@ -17,8 +17,19 @@ const int BTN3_PIN = 4; // 203号室: 左4
 const int BTN4_PIN = 5; // 203号室: 右2
 
 // --- リモート操作用の状態 ---
-// 2-203 のどのボックスをハイライトするか (1〜16)。0 は「どれもハイライトしない」
-int selectedBox203 = 0;
+// 2-203室の16区画の状態（0=false: 非ハイライト, 1=true: ハイライト）
+bool box203State[16] = {false, false, false, false, false, false, false, false,
+                         false, false, false, false, false, false, false, false};
+
+// 2-204室の16区画の状態（0=false: 非ハイライト, 1=true: ハイライト）
+bool box204State[16] = {false, false, false, false, false, false, false, false,
+                         false, false, false, false, false, false, false, false};
+
+// トグルスイッチの前回の状態（エッジ検出用）
+bool prevBtn1 = HIGH;
+bool prevBtn2 = HIGH;
+bool prevBtn3 = HIGH;
+bool prevBtn4 = HIGH;
 
 // --- 関数プロトタイプ ---
 void printWifiStatus();
@@ -57,6 +68,44 @@ void setup() {
 
 
 void loop() {
+  // --- トグルスイッチの状態をチェック（エッジ検出） ---
+  bool currentBtn1 = digitalRead(BTN1_PIN);
+  bool currentBtn2 = digitalRead(BTN2_PIN);
+  bool currentBtn3 = digitalRead(BTN3_PIN);
+  bool currentBtn4 = digitalRead(BTN4_PIN);
+
+  // BTN1 (204号室: 左3 = インデックス2) が押された瞬間を検出
+  if (prevBtn1 == HIGH && currentBtn1 == LOW) {
+    box204State[2] = !box204State[2]; // トグル
+    Serial.print("BTN1 pressed. box204State[2] = ");
+    Serial.println(box204State[2]);
+  }
+  prevBtn1 = currentBtn1;
+
+  // BTN2 (204号室: 右4 = インデックス12) が押された瞬間を検出
+  if (prevBtn2 == HIGH && currentBtn2 == LOW) {
+    box204State[12] = !box204State[12]; // トグル
+    Serial.print("BTN2 pressed. box204State[12] = ");
+    Serial.println(box204State[12]);
+  }
+  prevBtn2 = currentBtn2;
+
+  // BTN3 (203号室: 左4 = インデックス3) が押された瞬間を検出
+  if (prevBtn3 == HIGH && currentBtn3 == LOW) {
+    box203State[3] = !box203State[3]; // トグル
+    Serial.print("BTN3 pressed. box203State[3] = ");
+    Serial.println(box203State[3]);
+  }
+  prevBtn3 = currentBtn3;
+
+  // BTN4 (203号室: 右2 = インデックス7) が押された瞬間を検出
+  if (prevBtn4 == HIGH && currentBtn4 == LOW) {
+    box203State[7] = !box203State[7]; // トグル
+    Serial.print("BTN4 pressed. box203State[7] = ");
+    Serial.println(box203State[7]);
+  }
+  prevBtn4 = currentBtn4;
+
   WiFiClient client = server.available();
 
   if (client) {
@@ -125,10 +174,12 @@ void loop() {
       Serial.print("POST body: ");
       Serial.println(body);
 
-      // 非常にシンプルな JSON パース: {"productNumber": 3}
-      int idx = body.indexOf("\"productNumber\"");
-      if (idx != -1) {
-        int idxColon = body.indexOf(":", idx);
+      // JSON パース: {"room": "203", "box": 3, "action": "set"} または {"productNumber": 3} (後方互換)
+      
+      // 後方互換性: productNumber の処理
+      int idxProduct = body.indexOf("\"productNumber\"");
+      if (idxProduct != -1) {
+        int idxColon = body.indexOf(":", idxProduct);
         if (idxColon != -1) {
           int idxEnd = body.indexOf("}", idxColon);
           if (idxEnd == -1) idxEnd = body.length();
@@ -137,13 +188,95 @@ void loop() {
           int num = numStr.toInt();
 
           if (num >= 1 && num <= 16) {
-            selectedBox203 = num;
-          } else {
-            selectedBox203 = 0; // 範囲外はリセット
+            box203State[num - 1] = true; // インデックスは0-15
+            Serial.print("productNumber: box203State[");
+            Serial.print(num - 1);
+            Serial.println("] = true");
           }
+        }
+      }
 
-          Serial.print("selectedBox203 = ");
-          Serial.println(selectedBox203);
+      // 新しい形式: {"room": "203", "box": 3, "action": "set"} または {"room": "203", "action": "clear"}
+      int idxRoom = body.indexOf("\"room\"");
+      if (idxRoom != -1) {
+        // room の値を取得
+        int idxColon = body.indexOf(":", idxRoom);
+        int idxComma = body.indexOf(",", idxColon);
+        int idxEnd = body.indexOf("}", idxColon);
+        if (idxComma != -1 && idxComma < idxEnd) idxEnd = idxComma;
+        String roomStr = body.substring(idxColon + 1, idxEnd);
+        roomStr.trim();
+        roomStr.replace("\"", "");
+        
+        // box の値を取得（オプション）
+        int idxBox = body.indexOf("\"box\"");
+        int boxNum = -1;
+        if (idxBox != -1) {
+          int idxBoxColon = body.indexOf(":", idxBox);
+          int idxBoxComma = body.indexOf(",", idxBoxColon);
+          int idxBoxEnd = body.indexOf("}", idxBoxColon);
+          if (idxBoxComma != -1 && idxBoxComma < idxBoxEnd) idxBoxEnd = idxBoxComma;
+          String boxStr = body.substring(idxBoxColon + 1, idxBoxEnd);
+          boxStr.trim();
+          boxNum = boxStr.toInt();
+        }
+
+        // action の値を取得
+        int idxAction = body.indexOf("\"action\"");
+        String actionStr = "";
+        if (idxAction != -1) {
+          int idxActionColon = body.indexOf(":", idxAction);
+          int idxActionComma = body.indexOf(",", idxActionColon);
+          int idxActionEnd = body.indexOf("}", idxActionColon);
+          if (idxActionComma != -1 && idxActionComma < idxActionEnd) idxActionEnd = idxActionComma;
+          actionStr = body.substring(idxActionColon + 1, idxActionEnd);
+          actionStr.trim();
+          actionStr.replace("\"", "");
+        }
+
+        // 処理実行
+        if (roomStr == "203") {
+          if (actionStr == "clear") {
+            // 全解除
+            if (boxNum >= 1 && boxNum <= 16) {
+              box203State[boxNum - 1] = false;
+              Serial.print("Clear box203State[");
+              Serial.print(boxNum - 1);
+              Serial.println("] = false");
+            } else {
+              // box が指定されていない場合は全解除
+              for (int i = 0; i < 16; i++) {
+                box203State[i] = false;
+              }
+              Serial.println("Clear all box203State = false");
+            }
+          } else if (actionStr == "set" && boxNum >= 1 && boxNum <= 16) {
+            box203State[boxNum - 1] = true;
+            Serial.print("Set box203State[");
+            Serial.print(boxNum - 1);
+            Serial.println("] = true");
+          }
+        } else if (roomStr == "204") {
+          if (actionStr == "clear") {
+            // 全解除
+            if (boxNum >= 1 && boxNum <= 16) {
+              box204State[boxNum - 1] = false;
+              Serial.print("Clear box204State[");
+              Serial.print(boxNum - 1);
+              Serial.println("] = false");
+            } else {
+              // box が指定されていない場合は全解除
+              for (int i = 0; i < 16; i++) {
+                box204State[i] = false;
+              }
+              Serial.println("Clear all box204State = false");
+            }
+          } else if (actionStr == "set" && boxNum >= 1 && boxNum <= 16) {
+            box204State[boxNum - 1] = true;
+            Serial.print("Set box204State[");
+            Serial.print(boxNum - 1);
+            Serial.println("] = true");
+          }
         }
       }
 
@@ -153,9 +286,7 @@ void loop() {
       client.println("Access-Control-Allow-Origin: *");
       client.println("Connection: close");
       client.println();
-      client.print("{\"status\":\"ok\",\"selectedBox203\":");
-      client.print(selectedBox203);
-      client.println("}");
+      client.println("{\"status\":\"ok\"}");
     } else if (isGet) {
       // --- 通常のブラウザアクセス（GET）には HTML を返す ---
       sendDynamicPage(client);
@@ -181,11 +312,8 @@ void loop() {
  */
 void sendDynamicPage(WiFiClient client) {
   
-  // ★ 4つのボタンの状態を読み取る (押されている = LOW)
-  bool isBtn1_Pressed = (digitalRead(BTN1_PIN) == LOW);
-  bool isBtn2_Pressed = (digitalRead(BTN2_PIN) == LOW);
-  bool isBtn3_Pressed = (digitalRead(BTN3_PIN) == LOW);
-  bool isBtn4_Pressed = (digitalRead(BTN4_PIN) == LOW);
+  // トグルスイッチの状態も状態配列に反映（リアルタイム表示用）
+  // ただし、実際の状態管理は loop() 内のエッジ検出で行う
 
   // --- HTTPヘッダー ---
   client.println("HTTP/1.1 200 OK");
@@ -218,43 +346,14 @@ void sendDynamicPage(WiFiClient client) {
   client.println("<div class=\"room-name\">2-204</div>");
   client.println("<div class=\"grid-container\">");
   
-  // HTMLの順番 (nth-child) に合わせて動的にクラスを生成
-  // (1)
-  client.println("<div class=\"grid-item\"></div>");
-  // (2)
-  client.println("<div class=\"grid-item\"></div>");
-  // (3) - BTN1
-  client.print("<div class=\"grid-item ");
-  if (isBtn1_Pressed) { client.print("highlighted"); }
-  client.println("\"></div>");
-  // (4)
-  client.println("<div class=\"grid-item\"></div>");
-  // (5)
-  client.println("<div class=\"grid-item\"></div>");
-  // (6)
-  client.println("<div class=\"grid-item\"></div>");
-  // (7)
-  client.println("<div class=\"grid-item\"></div>");
-  // (8)
-  client.println("<div class=\"grid-item\"></div>");
-  // (9)
-  client.println("<div class=\"grid-item\"></div>");
-  // (10)
-  client.println("<div class=\"grid-item\"></div>");
-  // (11)
-  client.println("<div class=\"grid-item\"></div>");
-  // (12)
-  client.println("<div class=\"grid-item\"></div>");
-  // (13) - BTN2
-  client.print("<div class=\"grid-item ");
-  if (isBtn2_Pressed) { client.print("highlighted"); }
-  client.println("\"></div>");
-  // (14)
-  client.println("<div class=\"grid-item\"></div>");
-  // (15)
-  client.println("<div class=\"grid-item\"></div>");
-  // (16)
-  client.println("<div class=\"grid-item\"></div>");
+  // 2-204室の16区画を状態配列に基づいて生成
+  for (int i = 0; i < 16; i++) {
+    client.print("<div class=\"grid-item ");
+    if (box204State[i]) {
+      client.print("highlighted");
+    }
+    client.println("\"></div>");
+  }
   
   client.println("</div></div>"); // grid-container, room-204 終了
 
@@ -263,11 +362,10 @@ void sendDynamicPage(WiFiClient client) {
   client.println("<div class=\"room-name\">2-203</div>");
   client.println("<div class=\"grid-container\">");
 
-  // ★ 2-203 は Cloudflare Tunnel 経由の JSON（productNumber）で制御する
-  // selectedBox203 (1〜16) が一致したマスを赤くハイライト
-  for (int i = 1; i <= 16; i++) {
+  // 2-203室の16区画を状態配列に基づいて生成
+  for (int i = 0; i < 16; i++) {
     client.print("<div class=\"grid-item ");
-    if (selectedBox203 == i) {
+    if (box203State[i]) {
       client.print("highlighted");
     }
     client.println("\"></div>");

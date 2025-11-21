@@ -11,72 +11,80 @@ int status = WL_IDLE_STATUS;
 WiFiServer server(80);
 
 // --- ★ ボタンのピン設定 ---
-// 2-301室の新しい区画番号に対応するタクトスイッチ
-// 新しい区画番号→ピンのマッピング: 1→2, 2→3, 4→5, 5→6, 6→7, 8→9, 10→11
-// 区画3,7,9,11,12はボタンなし（リモート操作のみ）
-// 新しい区画番号（1-12）をインデックス（1-12）に直接マッピング
-// インデックス0は未使用、インデックス1-12が新しい区画番号1-12に対応
-const int ROOM301_NEW_BOX_TO_PIN[13] = {
-  0,   // インデックス0: 未使用
-  2,   // インデックス1: 区画1 → ピン2
-  3,   // インデックス2: 区画2 → ピン3
-  0,   // インデックス3: 区画3 → ボタンなし（リモート操作のみ）
-  5,   // インデックス4: 区画4 → ピン5
-  6,   // インデックス5: 区画5 → ピン6（新規追加、旧7と旧16の間）
-  7,   // インデックス6: 区画6 → ピン7
-  0,   // インデックス7: 区画7 → ボタンなし
-  9,   // インデックス8: 区画8 → ピン9
-  0,   // インデックス9: 区画9 → ボタンなし（リモート操作のみ）
-  11,  // インデックス10: 区画10 → ピン11
-  0,   // インデックス11: 区画11 → ボタンなし（リモート操作のみ）
-  0    // インデックス12: 区画12 → ボタンなし（リモート操作のみ）
+// 2-301室の16区画に対応するタクトスイッチ（2~13ピンとA0~A3ピン）
+// インデックス0~15がそれぞれ区画1~16に対応
+const int BTN301_PINS[16] = {
+  2,  3,  4,  5,  6,  7,  8,  9,   // ピン 2~9
+  10, 11, 12, 13,                  // ピン 10~13
+  A0, A1, A2, A3                   // アナログピン A0~A3
 };
 
-// 旧区画番号（1-16）から新区画番号へのマッピング（301号室）
-// 旧1→新12, 旧2→新11, 旧5→新6, 旧8→新10, 旧9→新9, 旧10→新8, 旧11→新1, 旧12→新2, 旧14→新3, 旧16→新4
-// 旧3,4,6,7,13,15は「なし」（ナンバーなしの空区画）
-// 新5は旧7と旧16の間に追加
-const int ROOM301_OLD_TO_NEW[17] = {
-  0,   // インデックス0: 未使用
-  12,  // 旧1 → 新12
-  11,  // 旧2 → 新11
-  0,   // 旧3 → なし（ナンバーなしの空区画）
-  0,   // 旧4 → なし（ナンバーなしの空区画）
-  6,   // 旧5 → 新6
-  0,   // 旧6 → なし（ナンバーなしの空区画）
-  0,   // 旧7 → なし（ナンバーなしの空区画、新5は別途追加）
-  10,  // 旧8 → 新10
-  9,   // 旧9 → 新9
-  8,   // 旧10 → 新8
-  1,   // 旧11 → 新1
-  2,   // 旧12 → 新2
-  0,   // 旧13 → なし（ナンバーなしの空区画）
-  3,   // 旧14 → 新3
-  0,   // 旧15 → なし（ナンバーなしの空区画）
-  4    // 旧16 → 新4
+// --- ★ 新しい区画番号マッピングテーブル ---
+// 新しい区画番号（1-16）から古いインデックス（0-15）へのマッピング
+// -1は「なし」（区画が存在しないことを示す）
+// 部屋301のマッピング
+const int ROOM301_NEW_TO_OLD[17] = {
+  -1,  // 0番は使用しない
+  11,  // 新しい区画1 → 古いインデックス11 (元の区画12)
+  10,  // 新しい区画2 → 古いインデックス10 (元の区画11)
+  -1,  // 新しい区画3 → なし
+  -1,  // 新しい区画4 → なし
+  5,   // 新しい区画5 → 古いインデックス5 (元の区画6)
+  -1,  // 新しい区画6 → なし
+  -1,  // 新しい区画7 → なし
+  9,   // 新しい区画8 → 古いインデックス9 (元の区画10)
+  8,   // 新しい区画9 → 古いインデックス8 (元の区画9)
+  7,   // 新しい区画10 → 古いインデックス7 (元の区画8)
+  0,   // 新しい区画11 → 古いインデックス0 (元の区画1)
+  1,   // 新しい区画12 → 古いインデックス1 (元の区画2)
+  -1,  // 新しい区画13 → なし
+  2,   // 新しい区画14 → 古いインデックス2 (元の区画3)
+  -1,  // 新しい区画15 → なし
+  3    // 新しい区画16 → 古いインデックス3 (元の区画4)
 };
 
-// 旧区画番号（1-16）から新区画番号へのマッピング（302号室）
-// 旧1→新1, 旧2→新2, 旧4→新3, 旧7→新5, 旧8→新6, 旧10→新7, 旧14→新4
-// 旧3,5,6,9,11,12,13,15,16は「なし」（ナンバーなしの空区画）
-const int ROOM302_OLD_TO_NEW[17] = {
-  0,   // インデックス0: 未使用
-  1,   // 旧1 → 新1
-  2,   // 旧2 → 新2
-  0,   // 旧3 → なし（ナンバーなしの空区画）
-  3,   // 旧4 → 新3
-  0,   // 旧5 → なし（ナンバーなしの空区画）
-  0,   // 旧6 → なし（ナンバーなしの空区画）
-  5,   // 旧7 → 新5
-  6,   // 旧8 → 新6
-  0,   // 旧9 → なし（ナンバーなしの空区画）
-  7,   // 旧10 → 新7
-  0,   // 旧11 → なし（ナンバーなしの空区画）
-  0,   // 旧12 → なし（ナンバーなしの空区画）
-  0,   // 旧13 → なし（ナンバーなしの空区画）
-  4,   // 旧14 → 新4
-  0,   // 旧15 → なし（ナンバーなしの空区画）
-  0    // 旧16 → なし（ナンバーなしの空区画）
+// 部屋302のマッピング
+const int ROOM302_NEW_TO_OLD[17] = {
+  -1,  // 0番は使用しない
+  0,   // 新しい区画1 → 古いインデックス0 (元の区画1)
+  1,   // 新しい区画2 → 古いインデックス1 (元の区画2)
+  -1,  // 新しい区画3 → なし
+  2,   // 新しい区画4 → 古いインデックス2 (元の区画3)
+  -1,  // 新しい区画5 → なし
+  -1,  // 新しい区画6 → なし
+  6,   // 新しい区画7 → 古いインデックス6 (元の区画7)
+  7,   // 新しい区画8 → 古いインデックス7 (元の区画8)
+  -1,  // 新しい区画9 → なし
+  9,   // 新しい区画10 → 古いインデックス9 (元の区画10)
+  -1,  // 新しい区画11 → なし
+  -1,  // 新しい区画12 → なし
+  -1,  // 新しい区画13 → なし
+  13,  // 新しい区画14 → 古いインデックス13 (元の区画14)
+  -1,  // 新しい区画15 → なし
+  -1   // 新しい区画16 → なし
+};
+
+// --- ★ 新しい区画番号からピン番号へのマッピング（部屋301のボタンロジック用） ---
+// 新しい区画番号（1-16）からピン番号へのマッピング
+// -1は「なし」（ボタンが存在しないことを示す）
+const int ROOM301_NEW_TO_PIN[17] = {
+  -1,  // 0番は使用しない
+  2,   // 新しい区画1 → ピン2
+  3,   // 新しい区画2 → ピン3
+  -1,  // 新しい区画3 → なし
+  5,   // 新しい区画4 → ピン5
+  6,   // 新しい区画5 → ピン6
+  7,   // 新しい区画6 → ピン7
+  -1,  // 新しい区画7 → なし
+  9,   // 新しい区画8 → ピン9
+  -1,  // 新しい区画9 → なし
+  11,  // 新しい区画10 → ピン11
+  -1,  // 新しい区画11 → なし
+  -1,  // 新しい区画12 → なし
+  -1,  // 新しい区画13 → なし
+  -1,  // 新しい区画14 → なし
+  -1,  // 新しい区画15 → なし
+  -1   // 新しい区画16 → なし
 };
 
 // 2-302室のタクトスイッチ（既存の設定を維持、必要に応じて拡張可能）
@@ -88,21 +96,18 @@ const int BTN4_PIN = 5; // 302号室: 右2
 bool box302State[16] = {false, false, false, false, false, false, false, false,
                          false, false, false, false, false, false, false, false};
 
-// 2-301室の17区画の状態（0=false: 非ハイライト, 1=true: ハイライト）
-// インデックス0は未使用、インデックス1-12が新しい区画番号1-12に対応
-// ただし、新5は旧7と旧16の間（インデックス8）に配置
-bool box301State[17] = {false, false, false, false, false, false, false, false,
-                         false, false, false, false, false, false, false, false, false};
+// 2-301室の16区画の状態（0=false: 非ハイライト, 1=true: ハイライト）
+bool box301State[16] = {false, false, false, false, false, false, false, false,
+                         false, false, false, false, false, false, false, false};
 
-// 2-301室のタクトスイッチ用のデバウンス変数（新しい区画番号に対応）
+// 2-301室のタクトスイッチ用のデバウンス変数
 // プルダウン接続: 押していない時=LOW、押している時=HIGH
-// 新しい区画番号1,2,4,5,6,8,10に対応するピンを使用
-bool prevBtn301[17] = {LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW,
-                        LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW};
-unsigned long lastDebounceTime301[17] = {0, 0, 0, 0, 0, 0, 0, 0,
-                                         0, 0, 0, 0, 0, 0, 0, 0, 0};
-bool stableBtn301[17] = {LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW,
-                          LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW};
+bool prevBtn301[16] = {LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW,
+                        LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW};
+unsigned long lastDebounceTime301[16] = {0, 0, 0, 0, 0, 0, 0, 0,
+                                         0, 0, 0, 0, 0, 0, 0, 0};
+bool stableBtn301[16] = {LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW,
+                          LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW};
 
 // 2-302室のタクトスイッチ用のデバウンス変数
 // プルダウン接続: 押していない時=LOW、押している時=HIGH
@@ -125,8 +130,8 @@ int cctweaked_port = 8080; // cc:tweakedのHTTPサーバーポート
 // --- 状態変化検出用の前回の状態 ---
 bool prevBox302State[16] = {false, false, false, false, false, false, false, false,
                              false, false, false, false, false, false, false, false};
-bool prevBox301State[17] = {false, false, false, false, false, false, false, false,
-                             false, false, false, false, false, false, false, false, false};
+bool prevBox301State[16] = {false, false, false, false, false, false, false, false,
+                             false, false, false, false, false, false, false, false};
 
 // --- 関数プロトタイプ ---
 void printWifiStatus();
@@ -139,12 +144,9 @@ void setup() {
   pinMode(led, OUTPUT);
 
   // ★ ピンモードを INPUT に設定（プルダウン接続: 押していない時=LOW、押している時=HIGH）
-  // 2-301室の新しい区画番号に対応するタクトスイッチ（ボタンがある区画のみ）
-  // 区画1,2,4,5,6,8,10に対応するピンを設定
-  for (int i = 1; i <= 12; i++) {
-    if (ROOM301_NEW_BOX_TO_PIN[i] != 0) {
-      pinMode(ROOM301_NEW_BOX_TO_PIN[i], INPUT);
-    }
+  // 2-301室の16個のタクトスイッチ
+  for (int i = 0; i < 16; i++) {
+    pinMode(BTN301_PINS[i], INPUT);
   }
   // 2-302室のタクトスイッチ
   pinMode(BTN3_PIN, INPUT);
@@ -190,62 +192,54 @@ void loop() {
   // --- トグルスイッチの状態をチェック（押した瞬間にtrue、releaseリクエストまで維持） ---
   unsigned long currentTime = millis();
   
-  // 2-301室の新しい区画番号に対応するタクトスイッチを処理
+  // 2-301室のタクトスイッチを処理（新しい区画番号→ピン番号のマッピングを使用）
   // プルダウン接続: 押していない時=LOW、押している時=HIGH
-  // 新しい区画番号1-12を処理（インデックス1-12が新しい区画番号1-12に対応）
-  for (int newBox = 1; newBox <= 12; newBox++) {
-    int pin = ROOM301_NEW_BOX_TO_PIN[newBox];
-    if (pin == 0) {
-      // ボタンがない区画はスキップ
-      continue;
+  for (int newBox = 1; newBox <= 16; newBox++) {
+    int pin = ROOM301_NEW_TO_PIN[newBox];
+    if (pin == -1) continue; // ボタンが存在しない区画はスキップ
+    
+    // ピン番号からインデックスを取得
+    int oldIdx = -1;
+    for (int i = 0; i < 16; i++) {
+      if (BTN301_PINS[i] == pin) {
+        oldIdx = i;
+        break;
+      }
     }
+    if (oldIdx == -1) continue; // ピンが見つからない場合はスキップ
     
     bool currentBtn = digitalRead(pin);
-    if (currentBtn != prevBtn301[newBox]) {
+    if (currentBtn != prevBtn301[oldIdx]) {
       // 状態が変化したので、デバウンスタイマーをリセット
-      lastDebounceTime301[newBox] = currentTime;
+      lastDebounceTime301[oldIdx] = currentTime;
     }
     // デバウンス時間が経過したら、状態を確定
-    if ((currentTime - lastDebounceTime301[newBox]) > debounceDelay) {
-      if (stableBtn301[newBox] != currentBtn) {
+    if ((currentTime - lastDebounceTime301[oldIdx]) > debounceDelay) {
+      if (stableBtn301[oldIdx] != currentBtn) {
         // 押された瞬間（LOW→HIGH）のみtrueに設定（離してもtrueのまま）
-        if (stableBtn301[newBox] == LOW && currentBtn == HIGH) {
-          box301State[newBox] = true;
-          Serial.print("BTN301[区画");
+        if (stableBtn301[oldIdx] == LOW && currentBtn == HIGH) {
+          box301State[oldIdx] = true;
+          Serial.print("BTN301[新区画");
           Serial.print(newBox);
           Serial.print("] (pin ");
           Serial.print(pin);
           Serial.print(") pressed -> box301State[");
-          Serial.print(newBox);
+          Serial.print(oldIdx);
           Serial.println("] = true");
-          // 状態変化検出でcc:tweakedに通知される
+          
+          // 状態が変化したので、cc:tweakedに通知（新しい区画番号を使用）
+          if (isCCTweakedConfigured()) {
+            sendToCCTweaked("301", newBox, "set");
+          }
         }
         // 離したとき（HIGH→LOW）は状態を変更しない（releaseリクエストまで維持）
-        stableBtn301[newBox] = currentBtn;
+        stableBtn301[oldIdx] = currentBtn;
       }
     }
-    prevBtn301[newBox] = currentBtn;
-  }
-  
-  // 状態変化検出: 301号室の赤色変化を検出してcc:tweakedに送信
-  for (int newBox = 1; newBox <= 12; newBox++) {
-    if (box301State[newBox] != prevBox301State[newBox]) {
-      if (box301State[newBox]) {
-        // 赤色に変化した
-        if (isCCTweakedConfigured()) {
-          sendToCCTweaked("301", newBox, "set");
-        }
-      } else {
-        // 赤色が解除された
-        if (isCCTweakedConfigured()) {
-          sendToCCTweaked("301", newBox, "clear");
-        }
-      }
-      prevBox301State[newBox] = box301State[newBox];
-    }
+    prevBtn301[oldIdx] = currentBtn;
   }
 
-  // BTN3 (302号室: 旧区画4 = 新区画3) の処理
+  // BTN3 (302号室: 新しい区画4) の処理
   // プルダウン接続: 押していない時=LOW、押している時=HIGH
   bool currentBtn3 = digitalRead(BTN3_PIN);
   if (currentBtn3 != prevBtn3) {
@@ -255,10 +249,21 @@ void loop() {
     if (stableBtn3 != currentBtn3) {
       // 押された瞬間（LOW→HIGH）のみtrueに設定（離してもtrueのまま）
       if (stableBtn3 == LOW && currentBtn3 == HIGH) {
-        box302State[3] = true; // 旧区画4（インデックス3）= 新区画3
-        Serial.print("BTN3 pressed -> box302State[旧4→新区画3] = true");
-        Serial.println();
-        // 状態変化検出でcc:tweakedに通知される
+        int newBox = 4; // 新しい区画4
+        int oldIdx = ROOM302_NEW_TO_OLD[newBox]; // 古いインデックス2
+        if (oldIdx != -1) {
+          box302State[oldIdx] = true;
+          Serial.print("BTN3 pressed -> box302State[新区画");
+          Serial.print(newBox);
+          Serial.print(" -> 古いインデックス");
+          Serial.print(oldIdx);
+          Serial.println("] = true");
+          
+          // 状態が変化したので、cc:tweakedに通知（新しい区画番号を使用）
+          if (isCCTweakedConfigured()) {
+            sendToCCTweaked("302", newBox, "set");
+          }
+        }
       }
       // 離したとき（HIGH→LOW）は状態を変更しない（releaseリクエストまで維持）
       stableBtn3 = currentBtn3;
@@ -266,7 +271,7 @@ void loop() {
   }
   prevBtn3 = currentBtn3;
 
-  // BTN4 (302号室: 旧区画8 = 新区画6) の処理
+  // BTN4 (302号室: 新しい区画8) の処理
   // プルダウン接続: 押していない時=LOW、押している時=HIGH
   bool currentBtn4 = digitalRead(BTN4_PIN);
   if (currentBtn4 != prevBtn4) {
@@ -276,37 +281,27 @@ void loop() {
     if (stableBtn4 != currentBtn4) {
       // 押された瞬間（LOW→HIGH）のみtrueに設定（離してもtrueのまま）
       if (stableBtn4 == LOW && currentBtn4 == HIGH) {
-        box302State[7] = true; // 旧区画8（インデックス7）= 新区画6
-        Serial.print("BTN4 pressed -> box302State[旧8→新区画6] = true");
-        Serial.println();
-        // 状態変化検出でcc:tweakedに通知される
+        int newBox = 8; // 新しい区画8
+        int oldIdx = ROOM302_NEW_TO_OLD[newBox]; // 古いインデックス7
+        if (oldIdx != -1) {
+          box302State[oldIdx] = true;
+          Serial.print("BTN4 pressed -> box302State[新区画");
+          Serial.print(newBox);
+          Serial.print(" -> 古いインデックス");
+          Serial.print(oldIdx);
+          Serial.println("] = true");
+          
+          // 状態が変化したので、cc:tweakedに通知（新しい区画番号を使用）
+          if (isCCTweakedConfigured()) {
+            sendToCCTweaked("302", newBox, "set");
+          }
+        }
       }
       // 離したとき（HIGH→LOW）は状態を変更しない（releaseリクエストまで維持）
       stableBtn4 = currentBtn4;
     }
   }
   prevBtn4 = currentBtn4;
-  
-  // 状態変化検出: 302号室の赤色変化を検出してcc:tweakedに送信
-  for (int i = 0; i < 16; i++) {
-    if (box302State[i] != prevBox302State[i]) {
-      if (box302State[i]) {
-        // 赤色に変化した
-        // 旧区画番号を新区画番号に変換（302号室のマッピング）
-        int newBox = ROOM302_OLD_TO_NEW[i + 1];
-        if (newBox > 0 && isCCTweakedConfigured()) {
-          sendToCCTweaked("302", newBox, "set");
-        }
-      } else {
-        // 赤色が解除された
-        int newBox = ROOM302_OLD_TO_NEW[i + 1];
-        if (newBox > 0 && isCCTweakedConfigured()) {
-          sendToCCTweaked("302", newBox, "clear");
-        }
-      }
-      prevBox302State[i] = box302State[i];
-    }
-  }
 
   WiFiClient client = server.available();
 
@@ -378,7 +373,7 @@ void loop() {
 
       // JSON パース: {"room": "203", "box": 3, "action": "set"} または {"productNumber": 3} (後方互換)
       
-      // 後方互換性: productNumber の処理
+      // 後方互換性: productNumber の処理（部屋302として処理）
       int idxProduct = body.indexOf("\"productNumber\"");
       if (idxProduct != -1) {
         int idxColon = body.indexOf(":", idxProduct);
@@ -390,10 +385,21 @@ void loop() {
           int num = numStr.toInt();
 
           if (num >= 1 && num <= 16) {
-            box302State[num - 1] = true; // インデックスは0-15
-            Serial.print("productNumber: box302State[");
-            Serial.print(num - 1);
-            Serial.println("] = true");
+            // 新しい区画番号を古いインデックスに変換
+            int oldIdx = ROOM302_NEW_TO_OLD[num];
+            if (oldIdx != -1) {
+              box302State[oldIdx] = true;
+              Serial.print("productNumber: box302State[新区画");
+              Serial.print(num);
+              Serial.print(" -> 古いインデックス");
+              Serial.print(oldIdx);
+              Serial.println("] = true");
+              
+              // 状態が変化したので、cc:tweakedに通知（新しい区画番号を使用）
+              if (isCCTweakedConfigured()) {
+                sendToCCTweaked("302", num, "set");
+              }
+            }
           }
         }
       }
@@ -438,30 +444,25 @@ void loop() {
 
         // 処理実行
         if (roomStr == "302") {
-          // 新区画番号を旧区画番号に変換
-          int oldBox = -1;
-          for (int i = 1; i <= 16; i++) {
-            if (ROOM302_OLD_TO_NEW[i] == boxNum) {
-              oldBox = i;
-              break;
-            }
-          }
-          
           if (actionStr == "clear") {
             // 全解除
-            if (oldBox >= 1 && oldBox <= 16) {
-              box302State[oldBox - 1] = false;
-              Serial.print("Clear box302State[旧");
-              Serial.print(oldBox);
-              Serial.print("→新区画");
-              Serial.print(boxNum);
-              Serial.println("] = false");
-              
-              // 状態が変化したので、cc:tweakedに通知
-              if (isCCTweakedConfigured()) {
-                sendToCCTweaked("302", boxNum, "clear");
+            if (boxNum >= 1 && boxNum <= 16) {
+              // 新しい区画番号を古いインデックスに変換
+              int oldIdx = ROOM302_NEW_TO_OLD[boxNum];
+              if (oldIdx != -1) {
+                box302State[oldIdx] = false;
+                Serial.print("Clear box302State[新区画");
+                Serial.print(boxNum);
+                Serial.print(" -> 古いインデックス");
+                Serial.print(oldIdx);
+                Serial.println("] = false");
+                
+                // 状態が変化したので、cc:tweakedに通知（新しい区画番号を使用）
+                if (isCCTweakedConfigured()) {
+                  sendToCCTweaked("302", boxNum, "clear");
+                }
               }
-            } else if (boxNum == -1) {
+            } else {
               // box が指定されていない場合は全解除
               for (int i = 0; i < 16; i++) {
                 box302State[i] = false;
@@ -473,35 +474,45 @@ void loop() {
                 sendToCCTweaked("302", -1, "clear"); // box=-1は全解除を示す
               }
             }
-          } else if (actionStr == "set" && oldBox >= 1 && oldBox <= 16) {
-            box302State[oldBox - 1] = true;
-            Serial.print("Set box302State[旧");
-            Serial.print(oldBox);
-            Serial.print("→新区画");
-            Serial.print(boxNum);
-            Serial.println("] = true");
-            
-            // 状態が変化したので、cc:tweakedに通知
-            if (isCCTweakedConfigured()) {
-              sendToCCTweaked("302", boxNum, "set");
+          } else if (actionStr == "set" && boxNum >= 1 && boxNum <= 16) {
+            // 新しい区画番号を古いインデックスに変換
+            int oldIdx = ROOM302_NEW_TO_OLD[boxNum];
+            if (oldIdx != -1) {
+              box302State[oldIdx] = true;
+              Serial.print("Set box302State[新区画");
+              Serial.print(boxNum);
+              Serial.print(" -> 古いインデックス");
+              Serial.print(oldIdx);
+              Serial.println("] = true");
+              
+              // 状態が変化したので、cc:tweakedに通知（新しい区画番号を使用）
+              if (isCCTweakedConfigured()) {
+                sendToCCTweaked("302", boxNum, "set");
+              }
             }
           }
         } else if (roomStr == "301") {
           if (actionStr == "clear") {
             // 全解除
-            if (boxNum >= 1 && boxNum <= 12) {
-              box301State[boxNum] = false; // 新しい区画番号はインデックス1-12
-              Serial.print("Clear box301State[区画");
-              Serial.print(boxNum);
-              Serial.println("] = false");
-              
-              // 状態が変化したので、cc:tweakedに通知
-              if (isCCTweakedConfigured()) {
-                sendToCCTweaked("301", boxNum, "clear");
+            if (boxNum >= 1 && boxNum <= 16) {
+              // 新しい区画番号を古いインデックスに変換
+              int oldIdx = ROOM301_NEW_TO_OLD[boxNum];
+              if (oldIdx != -1) {
+                box301State[oldIdx] = false;
+                Serial.print("Clear box301State[新区画");
+                Serial.print(boxNum);
+                Serial.print(" -> 古いインデックス");
+                Serial.print(oldIdx);
+                Serial.println("] = false");
+                
+                // 状態が変化したので、cc:tweakedに通知（新しい区画番号を使用）
+                if (isCCTweakedConfigured()) {
+                  sendToCCTweaked("301", boxNum, "clear");
+                }
               }
             } else {
               // box が指定されていない場合は全解除
-              for (int i = 1; i <= 12; i++) {
+              for (int i = 0; i < 16; i++) {
                 box301State[i] = false;
               }
               Serial.println("Clear all box301State = false");
@@ -511,15 +522,21 @@ void loop() {
                 sendToCCTweaked("301", -1, "clear"); // box=-1は全解除を示す
               }
             }
-          } else if (actionStr == "set" && boxNum >= 1 && boxNum <= 12) {
-            box301State[boxNum] = true; // 新しい区画番号はインデックス1-12
-            Serial.print("Set box301State[区画");
-            Serial.print(boxNum);
-            Serial.println("] = true");
-            
-            // 状態が変化したので、cc:tweakedに通知
-            if (isCCTweakedConfigured()) {
-              sendToCCTweaked("301", boxNum, "set");
+          } else if (actionStr == "set" && boxNum >= 1 && boxNum <= 16) {
+            // 新しい区画番号を古いインデックスに変換
+            int oldIdx = ROOM301_NEW_TO_OLD[boxNum];
+            if (oldIdx != -1) {
+              box301State[oldIdx] = true;
+              Serial.print("Set box301State[新区画");
+              Serial.print(boxNum);
+              Serial.print(" -> 古いインデックス");
+              Serial.print(oldIdx);
+              Serial.println("] = true");
+              
+              // 状態が変化したので、cc:tweakedに通知（新しい区画番号を使用）
+              if (isCCTweakedConfigured()) {
+                sendToCCTweaked("301", boxNum, "set");
+              }
             }
           }
         }
@@ -572,32 +589,17 @@ void sendDynamicPage(WiFiClient client) {
   // --- HTML開始 ---
   // cc:tweaked通信用の状態情報を先頭に配置（データサイズ削減・パース処理高速化）
   client.print("<!--BOX_STATUS:");
-  // 2-301室の状態（新しい区画番号1-12をカンマ区切りで: 1=赤色, 0=通常）
+  // 2-301室の状態（16区画をカンマ区切りで: 1=赤色, 0=通常）
   client.print("301:");
-  for (int i = 1; i <= 12; i++) {
-    if (i > 1) client.print(",");
+  for (int i = 0; i < 16; i++) {
+    if (i > 0) client.print(",");
     client.print(box301State[i] ? "1" : "0");
   }
-  // 2-302室の状態（新しい区画番号1-7をカンマ区切りで: 1=赤色, 0=通常）
-  // 新区画番号1,2,3,4,5,6,7に対応する旧区画番号の状態を表示
+  // 2-302室の状態（16区画をカンマ区切りで: 1=赤色, 0=通常）
   client.print("|302:");
-  bool first302 = true;
-  for (int newBox = 1; newBox <= 7; newBox++) {
-    if (!first302) client.print(",");
-    // 新区画番号に対応する旧区画番号を検索
-    int oldBox = -1;
-    for (int i = 1; i <= 16; i++) {
-      if (ROOM302_OLD_TO_NEW[i] == newBox) {
-        oldBox = i;
-        break;
-      }
-    }
-    if (oldBox >= 1 && oldBox <= 16) {
-      client.print(box302State[oldBox - 1] ? "1" : "0");
-    } else {
-      client.print("0");
-    }
-    first302 = false;
+  for (int i = 0; i < 16; i++) {
+    if (i > 0) client.print(",");
+    client.print(box302State[i] ? "1" : "0");
   }
   client.println("-->");
   
@@ -622,32 +624,51 @@ void sendDynamicPage(WiFiClient client) {
   client.println("<div class=\"room-name\">2-301</div>");
   client.println("<div class=\"grid-container\">");
   
-  // 2-301室の16区画を旧区画番号順に表示
-  // 「なし」の区画はナンバーなしの空区画として表示
-  // 新5は旧7と旧16の間に配置（旧7の後に新5を表示）
-  for (int oldBox = 1; oldBox <= 16; oldBox++) {
-    int newBox = ROOM301_OLD_TO_NEW[oldBox];
+  // 左列（Col 1、上から下）: 1, 2, ▫️, 8, 12, ▫️, 11
+  int room301LeftBoxes[] = {1, 2, -1, 8, 12, -1, 11};
+  for (int i = 0; i < 7; i++) {
+    int newBox = room301LeftBoxes[i];
+    int oldIdx = (newBox == -1) ? -1 : ROOM301_NEW_TO_OLD[newBox];
     client.print("<div class=\"grid-item ");
-    if (newBox > 0 && box301State[newBox]) {
+    if (oldIdx != -1 && box301State[oldIdx]) {
       client.print("highlighted");
     }
     client.print("\">");
-    if (newBox > 0) {
-      client.print(newBox); // 新しい区画番号を表示
+    if (oldIdx != -1) {
+      client.print(newBox);
     }
-    // newBox == 0 の場合は「なし」なので何も表示しない（空の区画）
     client.println("</div>");
-    
-    // 旧7の後に新5を挿入（旧7と旧16の間）
-    if (oldBox == 7) {
-      client.print("<div class=\"grid-item ");
-      if (box301State[5]) { // 新5の状態をチェック
-        client.print("highlighted");
-      }
-      client.print("\">");
-      client.print("5"); // 新5を表示
-      client.println("</div>");
+  }
+  
+  // 中央列（Col 2、上から下）: ◾️(なし), 10, ◾️(なし), 9, ◾️(なし), ◾️(なし), ◾️(なし)
+  int room301CenterBoxes[] = {-1, 10, -1, 9, -1, -1, -1};
+  for (int i = 0; i < 7; i++) {
+    int newBox = room301CenterBoxes[i];
+    if (newBox == -1) continue; // ◾️(なし)はdiv要素を作成しない
+    int oldIdx = ROOM301_NEW_TO_OLD[newBox];
+    client.print("<div class=\"grid-item ");
+    if (oldIdx != -1 && box301State[oldIdx]) {
+      client.print("highlighted");
     }
+    client.print("\">");
+    client.print(newBox);
+    client.println("</div>");
+  }
+  
+  // 右列（Col 3、上から下）: 3, 4, ▫️, 5, ▫️, ▫️, 6
+  int room301RightBoxes[] = {3, 4, -1, 5, -1, -1, 6};
+  for (int i = 0; i < 7; i++) {
+    int newBox = room301RightBoxes[i];
+    int oldIdx = (newBox == -1) ? -1 : ROOM301_NEW_TO_OLD[newBox];
+    client.print("<div class=\"grid-item ");
+    if (oldIdx != -1 && box301State[oldIdx]) {
+      client.print("highlighted");
+    }
+    client.print("\">");
+    if (oldIdx != -1) {
+      client.print(newBox);
+    }
+    client.println("</div>");
   }
   
   client.println("</div></div>"); // grid-container, room-301 終了
@@ -657,19 +678,73 @@ void sendDynamicPage(WiFiClient client) {
   client.println("<div class=\"room-name\">2-302</div>");
   client.println("<div class=\"grid-container\">");
 
-  // 2-302室の16区画を旧区画番号順に表示
-  // 「なし」の区画はナンバーなしの空区画として表示
-  for (int oldBox = 1; oldBox <= 16; oldBox++) {
-    int newBox = ROOM302_OLD_TO_NEW[oldBox];
+  // 左列（Col 1、上から下）: 5, ▫️, ▫️, ▫️, 1, ▫️, ▫️
+  int room302Col1Boxes[] = {5, -1, -1, -1, 1, -1, -1};
+  for (int i = 0; i < 7; i++) {
+    int newBox = room302Col1Boxes[i];
+    int oldIdx = (newBox == -1) ? -1 : ROOM302_NEW_TO_OLD[newBox];
     client.print("<div class=\"grid-item ");
-    if (newBox > 0 && oldBox >= 1 && oldBox <= 16 && box302State[oldBox - 1]) {
+    if (oldIdx != -1 && box302State[oldIdx]) {
       client.print("highlighted");
     }
     client.print("\">");
-    if (newBox > 0) {
-      client.print(newBox); // 新しい区画番号を表示
+    if (oldIdx != -1) {
+      client.print(newBox);
     }
-    // newBox == 0 の場合は「なし」なので何も表示しない（空の区画）
+    client.println("</div>");
+  }
+  
+  // Col 2（上から下）: ◾️(なし), ◾️(なし), ◾️(なし), ◾️(なし), ◾️(なし), ◾️(なし), 2
+  int room302Col2Boxes[] = {-1, -1, -1, -1, -1, -1, 2};
+  for (int i = 0; i < 7; i++) {
+    int newBox = room302Col2Boxes[i];
+    if (newBox == -1) continue; // ◾️(なし)はdiv要素を作成しない
+    int oldIdx = ROOM302_NEW_TO_OLD[newBox];
+    client.print("<div class=\"grid-item ");
+    if (oldIdx != -1 && box302State[oldIdx]) {
+      client.print("highlighted");
+    }
+    client.print("\">");
+    client.print(newBox);
+    client.println("</div>");
+  }
+  
+  // 中央列（Col 3、上から下）: ◾️(なし), ▫️, ◾️(なし), ▫️, ◾️(なし), ◾️(なし), ▫️
+  // Row 2, 4, 7に▫️（空のdiv）を配置
+  for (int i = 0; i < 3; i++) {
+    client.print("<div class=\"grid-item ");
+    client.print("\">");
+    client.println("</div>");
+  }
+  
+  // Col 4（上から下）: ◾️(なし), ◾️(なし), ◾️(なし), ◾️(なし), ◾️(なし), ◾️(なし), 2
+  int room302Col4Boxes[] = {-1, -1, -1, -1, -1, -1, 2};
+  for (int i = 0; i < 7; i++) {
+    int newBox = room302Col4Boxes[i];
+    if (newBox == -1) continue; // ◾️(なし)はdiv要素を作成しない
+    int oldIdx = ROOM302_NEW_TO_OLD[newBox];
+    client.print("<div class=\"grid-item ");
+    if (oldIdx != -1 && box302State[oldIdx]) {
+      client.print("highlighted");
+    }
+    client.print("\">");
+    client.print(newBox);
+    client.println("</div>");
+  }
+  
+  // 右列（Col 5、上から下）: 6, 7, ▫️, 4, ▫️, ▫️, ▫️
+  int room302Col5Boxes[] = {6, 7, -1, 4, -1, -1, -1};
+  for (int i = 0; i < 7; i++) {
+    int newBox = room302Col5Boxes[i];
+    int oldIdx = (newBox == -1) ? -1 : ROOM302_NEW_TO_OLD[newBox];
+    client.print("<div class=\"grid-item ");
+    if (oldIdx != -1 && box302State[oldIdx]) {
+      client.print("highlighted");
+    }
+    client.print("\">");
+    if (oldIdx != -1) {
+      client.print(newBox);
+    }
     client.println("</div>");
   }
 

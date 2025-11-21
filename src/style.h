@@ -64,6 +64,12 @@ const char STYLE_CSS[] PROGMEM = R"rawliteral(
     height: 50px; /* 四角のサイズ (高さ) */
     border: 1px solid black;
     background-color: #eee;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.2em;
+    color: #333;
   }
   /* 5列グリッド用に幅を調整 */
   .room-302 .grid-item {
@@ -73,6 +79,7 @@ const char STYLE_CSS[] PROGMEM = R"rawliteral(
   .highlighted {
     background-color: #ffcccc; /* ハイライト色 (薄い赤) */
     border: 1px solid red;
+    color: #cc0000; /* ハイライト時の文字色 */
   }
 
   /* 2-301 の配置 (3列グリッド) (grid-area: row-start / col-start / row-end / col-end) */

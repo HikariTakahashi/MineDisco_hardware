@@ -490,7 +490,9 @@ void sendDynamicPage(WiFiClient client) {
     if (box301State[i]) {
       client.print("highlighted");
     }
-    client.println("\"></div>");
+    client.print("\">");
+    client.print(i + 1); // 区画番号を表示（1-16）
+    client.println("</div>");
   }
   
   client.println("</div></div>"); // grid-container, room-301 終了
@@ -506,7 +508,9 @@ void sendDynamicPage(WiFiClient client) {
     if (box302State[i]) {
       client.print("highlighted");
     }
-    client.println("\"></div>");
+    client.print("\">");
+    client.print(i + 1); // 区画番号を表示（1-16）
+    client.println("</div>");
   }
 
   client.println("</div></div>"); // grid-container, room-302 終了

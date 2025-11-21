@@ -32,26 +32,51 @@ const int ROOM301_NEW_BOX_TO_PIN[13] = {
   0    // インデックス12: 区画12 → ボタンなし（リモート操作のみ）
 };
 
+// 旧区画番号（1-16）から新区画番号へのマッピング（301号室）
+// 旧1→新12, 旧2→新11, 旧5→新6, 旧8→新10, 旧9→新9, 旧10→新8, 旧11→新1, 旧12→新2, 旧14→新3, 旧16→新4
+// 旧3,4,6,7,13,15は「なし」（ナンバーなしの空区画）
+// 新5は旧7と旧16の間に追加
+const int ROOM301_OLD_TO_NEW[17] = {
+  0,   // インデックス0: 未使用
+  12,  // 旧1 → 新12
+  11,  // 旧2 → 新11
+  0,   // 旧3 → なし（ナンバーなしの空区画）
+  0,   // 旧4 → なし（ナンバーなしの空区画）
+  6,   // 旧5 → 新6
+  0,   // 旧6 → なし（ナンバーなしの空区画）
+  0,   // 旧7 → なし（ナンバーなしの空区画、新5は別途追加）
+  10,  // 旧8 → 新10
+  9,   // 旧9 → 新9
+  8,   // 旧10 → 新8
+  1,   // 旧11 → 新1
+  2,   // 旧12 → 新2
+  0,   // 旧13 → なし（ナンバーなしの空区画）
+  3,   // 旧14 → 新3
+  0,   // 旧15 → なし（ナンバーなしの空区画）
+  4    // 旧16 → 新4
+};
+
 // 旧区画番号（1-16）から新区画番号へのマッピング（302号室）
 // 旧1→新1, 旧2→新2, 旧4→新3, 旧7→新5, 旧8→新6, 旧10→新7, 旧14→新4
+// 旧3,5,6,9,11,12,13,15,16は「なし」（ナンバーなしの空区画）
 const int ROOM302_OLD_TO_NEW[17] = {
   0,   // インデックス0: 未使用
   1,   // 旧1 → 新1
   2,   // 旧2 → 新2
-  0,   // 旧3 → 削除
+  0,   // 旧3 → なし（ナンバーなしの空区画）
   3,   // 旧4 → 新3
-  0,   // 旧5 → 削除
-  0,   // 旧6 → 削除
+  0,   // 旧5 → なし（ナンバーなしの空区画）
+  0,   // 旧6 → なし（ナンバーなしの空区画）
   5,   // 旧7 → 新5
   6,   // 旧8 → 新6
-  0,   // 旧9 → 削除
+  0,   // 旧9 → なし（ナンバーなしの空区画）
   7,   // 旧10 → 新7
-  0,   // 旧11 → 削除
-  0,   // 旧12 → 削除
-  0,   // 旧13 → 削除
+  0,   // 旧11 → なし（ナンバーなしの空区画）
+  0,   // 旧12 → なし（ナンバーなしの空区画）
+  0,   // 旧13 → なし（ナンバーなしの空区画）
   4,   // 旧14 → 新4
-  0,   // 旧15 → 削除
-  0    // 旧16 → 削除
+  0,   // 旧15 → なし（ナンバーなしの空区画）
+  0    // 旧16 → なし（ナンバーなしの空区画）
 };
 
 // 2-302室のタクトスイッチ（既存の設定を維持、必要に応じて拡張可能）
@@ -597,16 +622,32 @@ void sendDynamicPage(WiFiClient client) {
   client.println("<div class=\"room-name\">2-301</div>");
   client.println("<div class=\"grid-container\">");
   
-  // 2-301室の新しい区画番号1-12を状態配列に基づいて生成
-  // 区画5は旧7と旧16の間（インデックス8）に配置
-  for (int newBox = 1; newBox <= 12; newBox++) {
+  // 2-301室の16区画を旧区画番号順に表示
+  // 「なし」の区画はナンバーなしの空区画として表示
+  // 新5は旧7と旧16の間に配置（旧7の後に新5を表示）
+  for (int oldBox = 1; oldBox <= 16; oldBox++) {
+    int newBox = ROOM301_OLD_TO_NEW[oldBox];
     client.print("<div class=\"grid-item ");
-    if (box301State[newBox]) {
+    if (newBox > 0 && box301State[newBox]) {
       client.print("highlighted");
     }
     client.print("\">");
-    client.print(newBox); // 新しい区画番号を表示
+    if (newBox > 0) {
+      client.print(newBox); // 新しい区画番号を表示
+    }
+    // newBox == 0 の場合は「なし」なので何も表示しない（空の区画）
     client.println("</div>");
+    
+    // 旧7の後に新5を挿入（旧7と旧16の間）
+    if (oldBox == 7) {
+      client.print("<div class=\"grid-item ");
+      if (box301State[5]) { // 新5の状態をチェック
+        client.print("highlighted");
+      }
+      client.print("\">");
+      client.print("5"); // 新5を表示
+      client.println("</div>");
+    }
   }
   
   client.println("</div></div>"); // grid-container, room-301 終了
@@ -616,24 +657,19 @@ void sendDynamicPage(WiFiClient client) {
   client.println("<div class=\"room-name\">2-302</div>");
   client.println("<div class=\"grid-container\">");
 
-  // 2-302室の新しい区画番号1-7を状態配列に基づいて生成
-  // 新区画番号1,2,3,4,5,6,7に対応する旧区画番号の状態を表示
-  for (int newBox = 1; newBox <= 7; newBox++) {
-    // 新区画番号に対応する旧区画番号を検索
-    int oldBox = -1;
-    for (int i = 1; i <= 16; i++) {
-      if (ROOM302_OLD_TO_NEW[i] == newBox) {
-        oldBox = i;
-        break;
-      }
-    }
-    
+  // 2-302室の16区画を旧区画番号順に表示
+  // 「なし」の区画はナンバーなしの空区画として表示
+  for (int oldBox = 1; oldBox <= 16; oldBox++) {
+    int newBox = ROOM302_OLD_TO_NEW[oldBox];
     client.print("<div class=\"grid-item ");
-    if (oldBox >= 1 && oldBox <= 16 && box302State[oldBox - 1]) {
+    if (newBox > 0 && oldBox >= 1 && oldBox <= 16 && box302State[oldBox - 1]) {
       client.print("highlighted");
     }
     client.print("\">");
-    client.print(newBox); // 新しい区画番号を表示
+    if (newBox > 0) {
+      client.print(newBox); // 新しい区画番号を表示
+    }
+    // newBox == 0 の場合は「なし」なので何も表示しない（空の区画）
     client.println("</div>");
   }
 

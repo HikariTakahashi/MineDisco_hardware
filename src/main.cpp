@@ -33,20 +33,22 @@ bool box301State[16] = {false, false, false, false, false, false, false, false,
                          false, false, false, false, false, false, false, false};
 
 // 2-301室のタクトスイッチ用のデバウンス変数
-bool prevBtn301[16] = {HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH,
-                        HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH};
+// プルダウン接続: 押していない時=LOW、押している時=HIGH
+bool prevBtn301[16] = {LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW,
+                        LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW};
 unsigned long lastDebounceTime301[16] = {0, 0, 0, 0, 0, 0, 0, 0,
                                          0, 0, 0, 0, 0, 0, 0, 0};
-bool stableBtn301[16] = {HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH,
-                          HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH};
+bool stableBtn301[16] = {LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW,
+                          LOW, LOW, LOW, LOW, LOW, LOW, LOW, LOW};
 
 // 2-302室のタクトスイッチ用のデバウンス変数
-bool prevBtn3 = HIGH;
-bool prevBtn4 = HIGH;
+// プルダウン接続: 押していない時=LOW、押している時=HIGH
+bool prevBtn3 = LOW;
+bool prevBtn4 = LOW;
 unsigned long lastDebounceTime3 = 0;
 unsigned long lastDebounceTime4 = 0;
-bool stableBtn3 = HIGH;
-bool stableBtn4 = HIGH;
+bool stableBtn3 = LOW;
+bool stableBtn4 = LOW;
 
 const unsigned long debounceDelay = 50; // 50ms のデバウンス時間
 
@@ -73,14 +75,14 @@ void setup() {
   Serial.begin(9600);
   pinMode(led, OUTPUT);
 
-  // ★ ピンモードを INPUT_PULLUP に設定
+  // ★ ピンモードを INPUT に設定（プルダウン接続: 押していない時=LOW、押している時=HIGH）
   // 2-301室の16個のタクトスイッチ
   for (int i = 0; i < 16; i++) {
-    pinMode(BTN301_PINS[i], INPUT_PULLUP);
+    pinMode(BTN301_PINS[i], INPUT);
   }
   // 2-302室のタクトスイッチ
-  pinMode(BTN3_PIN, INPUT_PULLUP);
-  pinMode(BTN4_PIN, INPUT_PULLUP);
+  pinMode(BTN3_PIN, INPUT);
+  pinMode(BTN4_PIN, INPUT);
 
   if (WiFi.status() == WL_NO_MODULE) {
     Serial.println("Communication with WiFi module failed!");
@@ -123,6 +125,7 @@ void loop() {
   unsigned long currentTime = millis();
   
   // 2-301室の16個のタクトスイッチを処理（インデックス0~15が区画1~16に対応）
+  // プルダウン接続: 押していない時=LOW、押している時=HIGH
   for (int i = 0; i < 16; i++) {
     bool currentBtn = digitalRead(BTN301_PINS[i]);
     if (currentBtn != prevBtn301[i]) {
@@ -132,8 +135,8 @@ void loop() {
     // デバウンス時間が経過したら、状態を確定
     if ((currentTime - lastDebounceTime301[i]) > debounceDelay) {
       if (stableBtn301[i] != currentBtn) {
-        // 押された瞬間（HIGH→LOW）のみtrueに設定（離してもtrueのまま）
-        if (stableBtn301[i] == HIGH && currentBtn == LOW) {
+        // 押された瞬間（LOW→HIGH）のみtrueに設定（離してもtrueのまま）
+        if (stableBtn301[i] == LOW && currentBtn == HIGH) {
           box301State[i] = true;
           Serial.print("BTN301[");
           Serial.print(i);
@@ -148,7 +151,7 @@ void loop() {
             sendToCCTweaked("301", i + 1, "set"); // boxは1-16
           }
         }
-        // 離したとき（LOW→HIGH）は状態を変更しない（releaseリクエストまで維持）
+        // 離したとき（HIGH→LOW）は状態を変更しない（releaseリクエストまで維持）
         stableBtn301[i] = currentBtn;
       }
     }
@@ -156,38 +159,40 @@ void loop() {
   }
 
   // BTN3 (302号室: 左4 = インデックス3) の処理
+  // プルダウン接続: 押していない時=LOW、押している時=HIGH
   bool currentBtn3 = digitalRead(BTN3_PIN);
   if (currentBtn3 != prevBtn3) {
     lastDebounceTime3 = currentTime;
   }
   if ((currentTime - lastDebounceTime3) > debounceDelay) {
     if (stableBtn3 != currentBtn3) {
-      // 押された瞬間（HIGH→LOW）のみtrueに設定（離してもtrueのまま）
-      if (stableBtn3 == HIGH && currentBtn3 == LOW) {
+      // 押された瞬間（LOW→HIGH）のみtrueに設定（離してもtrueのまま）
+      if (stableBtn3 == LOW && currentBtn3 == HIGH) {
         box302State[3] = true;
         Serial.print("BTN3 pressed -> box302State[3] = true");
         Serial.println();
       }
-      // 離したとき（LOW→HIGH）は状態を変更しない（releaseリクエストまで維持）
+      // 離したとき（HIGH→LOW）は状態を変更しない（releaseリクエストまで維持）
       stableBtn3 = currentBtn3;
     }
   }
   prevBtn3 = currentBtn3;
 
   // BTN4 (302号室: 右2 = インデックス7) の処理
+  // プルダウン接続: 押していない時=LOW、押している時=HIGH
   bool currentBtn4 = digitalRead(BTN4_PIN);
   if (currentBtn4 != prevBtn4) {
     lastDebounceTime4 = currentTime;
   }
   if ((currentTime - lastDebounceTime4) > debounceDelay) {
     if (stableBtn4 != currentBtn4) {
-      // 押された瞬間（HIGH→LOW）のみtrueに設定（離してもtrueのまま）
-      if (stableBtn4 == HIGH && currentBtn4 == LOW) {
+      // 押された瞬間（LOW→HIGH）のみtrueに設定（離してもtrueのまま）
+      if (stableBtn4 == LOW && currentBtn4 == HIGH) {
         box302State[7] = true;
         Serial.print("BTN4 pressed -> box302State[7] = true");
         Serial.println();
       }
-      // 離したとき（LOW→HIGH）は状態を変更しない（releaseリクエストまで維持）
+      // 離したとき（HIGH→LOW）は状態を変更しない（releaseリクエストまで維持）
       stableBtn4 = currentBtn4;
     }
   }

@@ -684,7 +684,6 @@ void sendDynamicPage(WiFiClient client) {
   client.println("<div class=\"grid-container\">");
 
   // 左列（Col 1、上から下）: 1, 2, ▫️, 3, ▫️, ▫️, ▫️
-  // nth-child(1-7)
   int box302Col1[] = {1, 2, -1, 3, -1, -1, -1};
   for (int i = 0; i < 7; i++) {
     int newBox = box302Col1[i];
@@ -704,23 +703,20 @@ void sendDynamicPage(WiFiClient client) {
   }
   
   // Col 2（上から下）: なし, なし, なし, なし, なし, なし, ▫️
-  // nth-child(8) - Row 7のみ空のdivを表示（▫️）
+  // Row 7のみ空のdivを表示（▫️）
   client.print("<div class=\"grid-item ");
   client.print("\">");
-  client.println("</div>"); // Row 7, Col 2: ▫️
+  client.println("</div>"); // Row 7: ▫️
   
   // 中央列（Col 3、上から下）: 空白, なし, ▫️, なし, なし, なし, 4
-  // nth-child(9): Row 1空白（CSSでRow 1に配置される必要があるが、現在Row 2に配置されている設定がある）
-  // nth-child(10): Row 3▫️（CSSでRow 3に配置される必要があるが、現在Row 4に配置されている設定がある）
-  // nth-child(11): Row 7は4（CSSでRow 7に配置）
-  // 注意: CSSのnth-child設定を正しい位置に変更する必要がある可能性がある
+  // Row 1は空白（空のdiv）、Row 3は▫️（空のdiv）、Row 7は4
   client.print("<div class=\"grid-item ");
   client.print("\">");
-  client.println("</div>"); // Row 1, Col 3: 空白 - nth-child(9)
+  client.println("</div>"); // Row 1: 空白
   client.print("<div class=\"grid-item ");
   client.print("\">");
-  client.println("</div>"); // Row 3, Col 3: ▫️ - nth-child(10)
-  // Row 7, Col 3: 4 - nth-child(11)
+  client.println("</div>"); // Row 3: ▫️
+  // Row 7: 4
   int box302Col3Row7 = 4;
   client.print("<div class=\"grid-item ");
   int oldIdxCol3Row7 = ROOM302_NEW_TO_OLD[box302Col3Row7];
@@ -732,17 +728,15 @@ void sendDynamicPage(WiFiClient client) {
   client.println("</div>");
   
   // Col 4（上から下）: 空白, なし, なし, なし, なし, なし, 空白
-  // nth-child(12): Row 1空白
-  // nth-child(13): Row 7空白（CSSでRow 7に配置される必要があるが、現在Row 7に配置されている設定がある）
+  // Row 1は空白（空のdiv）、Row 7は空白（空のdiv）
   client.print("<div class=\"grid-item ");
   client.print("\">");
-  client.println("</div>"); // Row 1, Col 4: 空白 - nth-child(12)
+  client.println("</div>"); // Row 1: 空白
   client.print("<div class=\"grid-item ");
   client.print("\">");
-  client.println("</div>"); // Row 7, Col 4: 空白 - nth-child(13)
+  client.println("</div>"); // Row 7: 空白
   
   // 右列（Col 5、上から下）: 5, 6, ▫️, 7, ▫️, ▫️, ▫️
-  // nth-child(14-20)
   int box302Col5[] = {5, 6, -1, 7, -1, -1, -1};
   for (int i = 0; i < 7; i++) {
     int newBox = box302Col5[i];

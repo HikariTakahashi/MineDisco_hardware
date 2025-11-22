@@ -198,27 +198,31 @@ void loop() {
     int pin = ROOM301_NEW_TO_PIN[newBox];
     if (pin == -1) continue; // ボタンが存在しない区画はスキップ
     
-    // ピン番号からインデックスを取得
-    int oldIdx = -1;
+    // 新しい区画番号から古いインデックスを取得
+    int oldIdx = ROOM301_NEW_TO_OLD[newBox];
+    if (oldIdx == -1) continue; // 区画が存在しない場合はスキップ
+    
+    // ピン番号からデバウンス用のインデックスを取得（物理ピンのインデックス）
+    int pinIdx = -1;
     for (int i = 0; i < 16; i++) {
       if (BTN301_PINS[i] == pin) {
-        oldIdx = i;
+        pinIdx = i;
         break;
       }
     }
-    if (oldIdx == -1) continue; // ピンが見つからない場合はスキップ
+    if (pinIdx == -1) continue; // ピンが見つからない場合はスキップ
     
     bool currentBtn = digitalRead(pin);
-    if (currentBtn != prevBtn301[oldIdx]) {
+    if (currentBtn != prevBtn301[pinIdx]) {
       // 状態が変化したので、デバウンスタイマーをリセット
-      lastDebounceTime301[oldIdx] = currentTime;
+      lastDebounceTime301[pinIdx] = currentTime;
     }
     // デバウンス時間が経過したら、状態を確定
-    if ((currentTime - lastDebounceTime301[oldIdx]) > debounceDelay) {
-      if (stableBtn301[oldIdx] != currentBtn) {
+    if ((currentTime - lastDebounceTime301[pinIdx]) > debounceDelay) {
+      if (stableBtn301[pinIdx] != currentBtn) {
         // 押された瞬間（LOW→HIGH）のみtrueに設定（離してもtrueのまま）
-        if (stableBtn301[oldIdx] == LOW && currentBtn == HIGH) {
-          box301State[oldIdx] = true;
+        if (stableBtn301[pinIdx] == LOW && currentBtn == HIGH) {
+          box301State[oldIdx] = true; // 新しい区画番号に対応する古いインデックスの状態を更新
           Serial.print("BTN301[新区画");
           Serial.print(newBox);
           Serial.print("] (pin ");
@@ -233,10 +237,10 @@ void loop() {
           }
         }
         // 離したとき（HIGH→LOW）は状態を変更しない（releaseリクエストまで維持）
-        stableBtn301[oldIdx] = currentBtn;
+        stableBtn301[pinIdx] = currentBtn;
       }
     }
-    prevBtn301[oldIdx] = currentBtn;
+    prevBtn301[pinIdx] = currentBtn;
   }
 
   // BTN3 (302号室: 新しい区画4) の処理

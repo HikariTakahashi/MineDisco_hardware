@@ -683,8 +683,8 @@ void sendDynamicPage(WiFiClient client) {
   client.println("<div class=\"room-name\">2-302</div>");
   client.println("<div class=\"grid-container\">");
 
-  // 左列（Col 1、上から下）: 1, 2, ▫️, 3, 空白, ▫️, 空白
-  int box302Col1[] = {1, 2, -1, 3, -2, -1, -2};
+  // 左列（Col 1、上から下）: 1, 2, ▫️, 3, ▫️, ▫️, ▫️
+  int box302Col1[] = {1, 2, -1, 3, -1, -1, -1};
   for (int i = 0; i < 7; i++) {
     int newBox = box302Col1[i];
     client.print("<div class=\"grid-item ");
@@ -698,15 +698,15 @@ void sendDynamicPage(WiFiClient client) {
     if (newBox > 0) {
       client.print(newBox);
     }
-    // -1は空のdiv（▫️）、-2は空白（表示なし）
+    // -1は空のdiv（▫️）
     client.println("</div>");
   }
   
-  // Col 2（上から下）: なし, なし, なし, なし, なし, なし, 空白
-  // Row 7のみ空のdivを表示（空白）
+  // Col 2（上から下）: なし, なし, なし, なし, なし, なし, ▫️
+  // Row 7のみ空のdivを表示（▫️）
   client.print("<div class=\"grid-item ");
   client.print("\">");
-  client.println("</div>"); // Row 7: 空白
+  client.println("</div>"); // Row 7: ▫️
   
   // 中央列（Col 3、上から下）: 空白, なし, ▫️, なし, なし, なし, 4
   // Row 1は空白（空のdiv）、Row 3は▫️（空のdiv）、Row 7は4
@@ -727,17 +727,17 @@ void sendDynamicPage(WiFiClient client) {
   client.print(box302Col3Row7);
   client.println("</div>");
   
-  // Col 4（上から下）: 空白, なし, なし, なし, なし, なし, ▫️
-  // Row 1は空白（空のdiv）、Row 7は▫️（空のdiv）
+  // Col 4（上から下）: 空白, なし, なし, なし, なし, なし, 空白
+  // Row 1は空白（空のdiv）、Row 7は空白（空のdiv）
   client.print("<div class=\"grid-item ");
   client.print("\">");
   client.println("</div>"); // Row 1: 空白
   client.print("<div class=\"grid-item ");
   client.print("\">");
-  client.println("</div>"); // Row 7: ▫️
+  client.println("</div>"); // Row 7: 空白
   
-  // 右列（Col 5、上から下）: 5, 6, ▫️, 7, ▫️, ▫️, 空白
-  int box302Col5[] = {5, 6, -1, 7, -1, -1, -2};
+  // 右列（Col 5、上から下）: 5, 6, ▫️, 7, ▫️, ▫️, ▫️
+  int box302Col5[] = {5, 6, -1, 7, -1, -1, -1};
   for (int i = 0; i < 7; i++) {
     int newBox = box302Col5[i];
     client.print("<div class=\"grid-item ");
@@ -751,7 +751,7 @@ void sendDynamicPage(WiFiClient client) {
     if (newBox > 0) {
       client.print(newBox);
     }
-    // -1は空のdiv（▫️）、-2は空白（表示なし）
+    // -1は空のdiv（▫️）
     client.println("</div>");
   }
 

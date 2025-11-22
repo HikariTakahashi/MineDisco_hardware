@@ -83,51 +83,50 @@ const char STYLE_CSS[] PROGMEM = R"rawliteral(
   }
 
   /* 2-301 の配置 (3列グリッド) (grid-area: row-start / col-start / row-end / col-end) */
-  /* 左列（Col 1、上から下）: 1, 2, ▫️, 8, 12, ▫️, 11 */
-  .room-301 .grid-item:nth-child(1) { grid-area: 1 / 1 / 2 / 2; } /* Row 1, Col 1: 1 */
-  .room-301 .grid-item:nth-child(2) { grid-area: 2 / 1 / 3 / 2; } /* Row 2, Col 1: 2 */
-  .room-301 .grid-item:nth-child(3) { grid-area: 3 / 1 / 4 / 2; } /* Row 3, Col 1: ▫️ */
-  .room-301 .grid-item:nth-child(4) { grid-area: 4 / 1 / 5 / 2; } /* Row 4, Col 1: 8 */
-  .room-301 .grid-item:nth-child(5) { grid-area: 5 / 1 / 6 / 2; } /* Row 5, Col 1: 12 */
-  .room-301 .grid-item:nth-child(6) { grid-area: 6 / 1 / 7 / 2; } /* Row 6, Col 1: ▫️ */
-  .room-301 .grid-item:nth-child(7) { grid-area: 7 / 1 / 8 / 2; } /* Row 7, Col 1: 11 */
-  /* 中央列（Col 2、上から下）: ◾️(なし), 10, ◾️(なし), 9, ◾️(なし), ◾️(なし), ◾️(なし) */
-  .room-301 .grid-item:nth-child(8) { grid-area: 2 / 2 / 3 / 3; } /* Row 2, Col 2: 10 */
-  .room-301 .grid-item:nth-child(9) { grid-area: 4 / 2 / 5 / 3; } /* Row 4, Col 2: 9 */
-  /* 右列（Col 3、上から下）: 3, 4, ▫️, 5, ▫️, ▫️, 6 */
-  .room-301 .grid-item:nth-child(10) { grid-area: 1 / 3 / 2 / 4; } /* Row 1, Col 3: 3 */
-  .room-301 .grid-item:nth-child(11) { grid-area: 2 / 3 / 3 / 4; } /* Row 2, Col 3: 4 */
-  .room-301 .grid-item:nth-child(12) { grid-area: 3 / 3 / 4 / 4; } /* Row 3, Col 3: ▫️ */
-  .room-301 .grid-item:nth-child(13) { grid-area: 4 / 3 / 5 / 4; } /* Row 4, Col 3: 5 */
-  .room-301 .grid-item:nth-child(14) { grid-area: 5 / 3 / 6 / 4; } /* Row 5, Col 3: ▫️ */
-  .room-301 .grid-item:nth-child(15) { grid-area: 6 / 3 / 7 / 4; } /* Row 6, Col 3: ▫️ */
-  .room-301 .grid-item:nth-child(16) { grid-area: 7 / 3 / 8 / 4; } /* Row 7, Col 3: 6 */
+  .room-301 .grid-item:nth-child(1) { grid-area: 1 / 1 / 2 / 2; }
+  .room-301 .grid-item:nth-child(2) { grid-area: 2 / 1 / 3 / 2; }
+  .room-301 .grid-item:nth-child(3) { grid-area: 3 / 1 / 4 / 2; } /* 左3 (ハイライト) */
+  .room-301 .grid-item:nth-child(4) { grid-area: 4 / 1 / 5 / 2; }
+  .room-301 .grid-item:nth-child(5) { grid-area: 5 / 1 / 6 / 2; }
+  .room-301 .grid-item:nth-child(6) { grid-area: 7 / 1 / 8 / 2; } /* 左下1 */
+  .room-301 .grid-item:nth-child(7) { grid-area: 8 / 1 / 9 / 2; } /* 左下2 */
 
-  /* 2-302 の配置 (5列グリッド) */
-  /* 左列（Col 1、上から下）: 5, ▫️, ▫️, ▫️, 1, ▫️, ▫️ */
-  .room-302 .grid-item:nth-child(1) { grid-area: 1 / 1 / 2 / 2; } /* Row 1, Col 1: 5 */
-  .room-302 .grid-item:nth-child(2) { grid-area: 2 / 1 / 3 / 2; } /* Row 2, Col 1: ▫️ */
-  .room-302 .grid-item:nth-child(3) { grid-area: 3 / 1 / 4 / 2; } /* Row 3, Col 1: ▫️ */
-  .room-302 .grid-item:nth-child(4) { grid-area: 4 / 1 / 5 / 2; } /* Row 4, Col 1: ▫️ */
-  .room-302 .grid-item:nth-child(5) { grid-area: 5 / 1 / 6 / 2; } /* Row 5, Col 1: 1 */
-  .room-302 .grid-item:nth-child(6) { grid-area: 6 / 1 / 7 / 2; } /* Row 6, Col 1: ▫️ */
-  .room-302 .grid-item:nth-child(7) { grid-area: 7 / 1 / 8 / 2; } /* Row 7, Col 1: ▫️ */
-  /* Col 2（上から下）: ◾️(なし), ◾️(なし), ◾️(なし), ◾️(なし), ◾️(なし), ◾️(なし), 2 */
-  .room-302 .grid-item:nth-child(8) { grid-area: 7 / 2 / 8 / 3; } /* Row 7, Col 2: 2 */
-  /* 中央列（Col 3、上から下）: ◾️(なし), ▫️, ◾️(なし), ▫️, ◾️(なし), ◾️(なし), ▫️ */
-  .room-302 .grid-item:nth-child(9) { grid-area: 2 / 3 / 3 / 4; } /* Row 2, Col 3: ▫️ */
-  .room-302 .grid-item:nth-child(10) { grid-area: 4 / 3 / 5 / 4; } /* Row 4, Col 3: ▫️ */
-  .room-302 .grid-item:nth-child(11) { grid-area: 7 / 3 / 8 / 4; } /* Row 7, Col 3: ▫️ */
-  /* Col 4（上から下）: ◾️(なし), ◾️(なし), ◾️(なし), ◾️(なし), ◾️(なし), ◾️(なし), 2 */
-  .room-302 .grid-item:nth-child(12) { grid-area: 7 / 4 / 8 / 5; } /* Row 7, Col 4: 2 */
-  /* 右列（Col 5、上から下）: 6, 7, ▫️, 4, ▫️, ▫️, ▫️ */
-  .room-302 .grid-item:nth-child(13) { grid-area: 1 / 5 / 2 / 6; } /* Row 1, Col 5: 6 */
-  .room-302 .grid-item:nth-child(14) { grid-area: 2 / 5 / 3 / 6; } /* Row 2, Col 5: 7 */
-  .room-302 .grid-item:nth-child(15) { grid-area: 3 / 5 / 4 / 6; } /* Row 3, Col 5: ▫️ */
-  .room-302 .grid-item:nth-child(16) { grid-area: 4 / 5 / 5 / 6; } /* Row 4, Col 5: 4 */
-  .room-302 .grid-item:nth-child(17) { grid-area: 5 / 5 / 6 / 6; } /* Row 5, Col 5: ▫️ */
-  .room-302 .grid-item:nth-child(18) { grid-area: 6 / 5 / 7 / 6; } /* Row 6, Col 5: ▫️ */
-  .room-302 .grid-item:nth-child(19) { grid-area: 7 / 5 / 8 / 6; } /* Row 7, Col 5: ▫️ */
+  .room-301 .grid-item:nth-child(8) { grid-area: 2 / 2 / 3 / 3; } /* 中央1 */
+  .room-301 .grid-item:nth-child(9) { grid-area: 4 / 2 / 5 / 3; } /* 中央2 */
+
+  .room-301 .grid-item:nth-child(10) { grid-area: 1 / 3 / 2 / 4; }
+  .room-301 .grid-item:nth-child(11) { grid-area: 2 / 3 / 3 / 4; }
+  .room-301 .grid-item:nth-child(12) { grid-area: 3 / 3 / 4 / 4; }
+  .room-301 .grid-item:nth-child(13) { grid-area: 4 / 3 / 5 / 4; } /* 右4 (ハイライト) */
+  .room-301 .grid-item:nth-child(14) { grid-area: 5 / 3 / 6 / 4; } /* 右5 */
+  .room-301 .grid-item:nth-child(15) { grid-area: 7 / 3 / 8 / 4; } /* 右下1 */
+  .room-301 .grid-item:nth-child(16) { grid-area: 8 / 3 / 9 / 4; } /* 右下2 */
+
+
+  /* 2-302 の配置 (5列グリッドベースに修正) */
+  /* 左列 (Col 1) */
+  .room-302 .grid-item:nth-child(1) { grid-area: 1 / 1 / 2 / 2; }
+  .room-302 .grid-item:nth-child(2) { grid-area: 2 / 1 / 3 / 2; }
+  .room-302 .grid-item:nth-child(3) { grid-area: 3 / 1 / 4 / 2; }
+  .room-302 .grid-item:nth-child(4) { grid-area: 4 / 1 / 5 / 2; } /* 左4 (ハイライト) */
+  .room-302 .grid-item:nth-child(5) { grid-area: 5 / 1 / 6 / 2; }
+
+  /* 中央 (Col 3) */
+  .room-302 .grid-item:nth-child(6) { grid-area: 3 / 3 / 4 / 4; } /* 中央1 */
+
+  /* 右列 (Col 5) */
+  .room-302 .grid-item:nth-child(7) { grid-area: 1 / 5 / 2 / 6; }
+  .room-302 .grid-item:nth-child(8) { grid-area: 2 / 5 / 3 / 6; } /* 右2 (ハイライト) */
+  .room-302 .grid-item:nth-child(9) { grid-area: 3 / 5 / 4 / 6; }
+  .room-302 .grid-item:nth-child(10) { grid-area: 4 / 5 / 5 / 6; }
+  .room-302 .grid-item:nth-child(11) { grid-area: 5 / 5 / 6 / 6; }
+
+  /* 下部の5連 (Row 8, Col 1-5) */
+  .room-302 .grid-item:nth-child(12) { grid-area: 8 / 1 / 9 / 2; } /* 下1 */
+  .room-302 .grid-item:nth-child(13) { grid-area: 8 / 2 / 9 / 3; } /* 下2 */
+  .room-302 .grid-item:nth-child(14) { grid-area: 8 / 3 / 9 / 4; } /* 下3 */
+  .room-302 .grid-item:nth-child(15) { grid-area: 8 / 4 / 9 / 5; } /* 下4 */
+  .room-302 .grid-item:nth-child(16) { grid-area: 8 / 5 / 9 / 6; } /* 下5 */
 )rawliteral";
 
 #endif

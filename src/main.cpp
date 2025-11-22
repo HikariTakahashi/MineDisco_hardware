@@ -69,22 +69,22 @@ const int ROOM302_NEW_TO_OLD[17] = {
 // -1は「なし」（ボタンが存在しないことを示す）
 const int ROOM301_NEW_TO_PIN[17] = {
   -1,  // 0番は使用しない
-  12,  // 新しい区画1 → ピン12 (BTN301_PINS[11])
-  11,  // 新しい区画2 → ピン11 (BTN301_PINS[10])
+  2,   // 新しい区画1 → ピン2
+  3,   // 新しい区画2 → ピン3
   -1,  // 新しい区画3 → なし
-  -1,  // 新しい区画4 → なし
-  6,   // 新しい区画5 → ピン6 (BTN301_PINS[5])
-  -1,  // 新しい区画6 → なし
+  5,   // 新しい区画4 → ピン5
+  6,   // 新しい区画5 → ピン6
+  7,   // 新しい区画6 → ピン7
   -1,  // 新しい区画7 → なし
-  10,  // 新しい区画8 → ピン10 (BTN301_PINS[9])
-  9,   // 新しい区画9 → ピン9 (BTN301_PINS[8])
-  8,   // 新しい区画10 → ピン8 (BTN301_PINS[7])
-  2,   // 新しい区画11 → ピン2 (BTN301_PINS[0])
-  3,   // 新しい区画12 → ピン3 (BTN301_PINS[1])
+  9,   // 新しい区画8 → ピン9
+  -1,  // 新しい区画9 → なし
+  11,  // 新しい区画10 → ピン11
+  -1,  // 新しい区画11 → なし
+  -1,  // 新しい区画12 → なし
   -1,  // 新しい区画13 → なし
-  4,   // 新しい区画14 → ピン4 (BTN301_PINS[2])
+  -1,  // 新しい区画14 → なし
   -1,  // 新しい区画15 → なし
-  5    // 新しい区画16 → ピン5 (BTN301_PINS[3])
+  -1   // 新しい区画16 → なし
 };
 
 // 2-302室のタクトスイッチ（既存の設定を維持、必要に応じて拡張可能）
@@ -624,18 +624,55 @@ void sendDynamicPage(WiFiClient client) {
   client.println("<div class=\"room-name\">2-301</div>");
   client.println("<div class=\"grid-container\">");
   
-  // 2-301室の新しい区画番号（1-16）を順番に表示
-  for (int newBox = 1; newBox <= 16; newBox++) {
-    int oldIdx = ROOM301_NEW_TO_OLD[newBox];
+  // 左列（Col 1、上から下）: 1, 2, ▫️, 8, 12, ▫️, 11
+  int box301Left[] = {1, 2, -1, 8, 12, -1, 11};
+  for (int i = 0; i < 7; i++) {
+    int newBox = box301Left[i];
     client.print("<div class=\"grid-item ");
-    if (oldIdx != -1 && box301State[oldIdx]) {
-      client.print("highlighted");
+    if (newBox != -1) {
+      int oldIdx = ROOM301_NEW_TO_OLD[newBox];
+      if (oldIdx != -1 && box301State[oldIdx]) {
+        client.print("highlighted");
+      }
     }
     client.print("\">");
-    if (oldIdx != -1) {
-      client.print(newBox); // 新しい区画番号を表示
+    if (newBox != -1) {
+      client.print(newBox);
     }
-    // 「なし」の区画は空のdivとして表示（または何も表示しない）
+    client.println("</div>");
+  }
+  
+  // 中央列（Col 2、上から下）: ◾️(なし), 10, ◾️(なし), 9, ◾️(なし), ◾️(なし), ◾️(なし)
+  int box301Center[] = {-1, 10, -1, 9, -1, -1, -1};
+  for (int i = 0; i < 7; i++) {
+    int newBox = box301Center[i];
+    if (newBox != -1) {
+      client.print("<div class=\"grid-item ");
+      int oldIdx = ROOM301_NEW_TO_OLD[newBox];
+      if (oldIdx != -1 && box301State[oldIdx]) {
+        client.print("highlighted");
+      }
+      client.print("\">");
+      client.print(newBox);
+      client.println("</div>");
+    }
+  }
+  
+  // 右列（Col 3、上から下）: 3, 4, ▫️, 5, ▫️, ▫️, 6
+  int box301Right[] = {3, 4, -1, 5, -1, -1, 6};
+  for (int i = 0; i < 7; i++) {
+    int newBox = box301Right[i];
+    client.print("<div class=\"grid-item ");
+    if (newBox != -1) {
+      int oldIdx = ROOM301_NEW_TO_OLD[newBox];
+      if (oldIdx != -1 && box301State[oldIdx]) {
+        client.print("highlighted");
+      }
+    }
+    client.print("\">");
+    if (newBox != -1) {
+      client.print(newBox);
+    }
     client.println("</div>");
   }
   
@@ -646,18 +683,83 @@ void sendDynamicPage(WiFiClient client) {
   client.println("<div class=\"room-name\">2-302</div>");
   client.println("<div class=\"grid-container\">");
 
-  // 2-302室の新しい区画番号（1-16）を順番に表示
-  for (int newBox = 1; newBox <= 16; newBox++) {
-    int oldIdx = ROOM302_NEW_TO_OLD[newBox];
+  // 左列（Col 1、上から下）: 5, ▫️, ▫️, ▫️, 1, ▫️, ▫️
+  int box302Col1[] = {5, -1, -1, -1, 1, -1, -1};
+  for (int i = 0; i < 7; i++) {
+    int newBox = box302Col1[i];
     client.print("<div class=\"grid-item ");
-    if (oldIdx != -1 && box302State[oldIdx]) {
-      client.print("highlighted");
+    if (newBox != -1) {
+      int oldIdx = ROOM302_NEW_TO_OLD[newBox];
+      if (oldIdx != -1 && box302State[oldIdx]) {
+        client.print("highlighted");
+      }
     }
     client.print("\">");
-    if (oldIdx != -1) {
-      client.print(newBox); // 新しい区画番号を表示
+    if (newBox != -1) {
+      client.print(newBox);
     }
-    // 「なし」の区画は空のdivとして表示（または何も表示しない）
+    client.println("</div>");
+  }
+  
+  // Col 2（上から下）: ◾️(なし), ◾️(なし), ◾️(なし), ◾️(なし), ◾️(なし), ◾️(なし), 2
+  int box302Col2[] = {-1, -1, -1, -1, -1, -1, 2};
+  for (int i = 0; i < 7; i++) {
+    int newBox = box302Col2[i];
+    if (newBox != -1) {
+      client.print("<div class=\"grid-item ");
+      int oldIdx = ROOM302_NEW_TO_OLD[newBox];
+      if (oldIdx != -1 && box302State[oldIdx]) {
+        client.print("highlighted");
+      }
+      client.print("\">");
+      client.print(newBox);
+      client.println("</div>");
+    }
+  }
+  
+  // 中央列（Col 3、上から下）: ◾️(なし), ▫️, ◾️(なし), ▫️, ◾️(なし), ◾️(なし), ▫️
+  // Row 2, 4, 7のみ空のdivを表示
+  client.print("<div class=\"grid-item ");
+  client.print("\">");
+  client.println("</div>"); // Row 2
+  client.print("<div class=\"grid-item ");
+  client.print("\">");
+  client.println("</div>"); // Row 4
+  client.print("<div class=\"grid-item ");
+  client.print("\">");
+  client.println("</div>"); // Row 7
+  
+  // Col 4（上から下）: ◾️(なし), ◾️(なし), ◾️(なし), ◾️(なし), ◾️(なし), ◾️(なし), 2
+  int box302Col4[] = {-1, -1, -1, -1, -1, -1, 2};
+  for (int i = 0; i < 7; i++) {
+    int newBox = box302Col4[i];
+    if (newBox != -1) {
+      client.print("<div class=\"grid-item ");
+      int oldIdx = ROOM302_NEW_TO_OLD[newBox];
+      if (oldIdx != -1 && box302State[oldIdx]) {
+        client.print("highlighted");
+      }
+      client.print("\">");
+      client.print(newBox);
+      client.println("</div>");
+    }
+  }
+  
+  // 右列（Col 5、上から下）: 6, 7, ▫️, 4, ▫️, ▫️, ▫️
+  int box302Col5[] = {6, 7, -1, 4, -1, -1, -1};
+  for (int i = 0; i < 7; i++) {
+    int newBox = box302Col5[i];
+    client.print("<div class=\"grid-item ");
+    if (newBox != -1) {
+      int oldIdx = ROOM302_NEW_TO_OLD[newBox];
+      if (oldIdx != -1 && box302State[oldIdx]) {
+        client.print("highlighted");
+      }
+    }
+    client.print("\">");
+    if (newBox != -1) {
+      client.print(newBox);
+    }
     client.println("</div>");
   }
 
